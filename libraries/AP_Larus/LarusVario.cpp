@@ -14,7 +14,8 @@ LarusVario::LarusVario(const AP_FixedWing &parms) :
 }
 
 bool LarusVario::get_height_agl(void){
-    return AP::ahrs().get_hagl(_agl);
+    _agl = AP_Baro::get_singleton()->get_altitude();
+    return _agl;
 }
 
 float LarusVario::get_energy_height(void){

@@ -6,6 +6,7 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 #pragma once
 
 #include <AP_AHRS/AP_AHRS.h>
+#include <AP_Baro/AP_Baro.h>
 #include <AP_Param/AP_Param.h>
 #include <Filter/AverageFilter.h>
 #include <AP_Vehicle/AP_FixedWing.h>

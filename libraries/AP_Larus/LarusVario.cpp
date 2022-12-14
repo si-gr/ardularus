@@ -13,9 +13,8 @@ LarusVario::LarusVario(const AP_FixedWing &parms) :
     AP::ahrs().set_wind_estimation_enabled(true);
 }
 
-bool LarusVario::get_height_agl(void){
-    _agl = AP_Baro::get_singleton()->get_altitude();
-    return _agl;
+void LarusVario::get_height_baro(void){
+    _height_baro = AP_Baro::get_singleton()->get_altitude();
 }
 
 float LarusVario::get_energy_height(void){
@@ -24,7 +23,7 @@ float LarusVario::get_energy_height(void){
 }
 
 float LarusVario::get_te_altitude(void){
-    return _eheight + _agl;
+    return _eheight + _height_baro;
 }
 
 float LarusVario::get_wind_compensation(Vector3f velned, Vector3f wind){
@@ -34,7 +33,7 @@ float LarusVario::get_wind_compensation(Vector3f velned, Vector3f wind){
 void LarusVario::update()
 {
     const AP_AHRS &_ahrs = AP::ahrs();
-    bool hagl_succ = get_height_agl();
+    get_height_baro();
     float aspd = 0;
     if (!_ahrs.airspeed_estimate(aspd)) {
             aspd = _aparm.airspeed_cruise_cm * 0.01f;
@@ -106,9 +105,8 @@ void LarusVario::update()
 // @Field: accx: acc along X axis
 // @Field: accy: wind along Y axis
 // @Field: accz: wind along Z axis
-// @Field: agl: agl height
-// @Field: agl_succ: successful agl height
-    AP::logger().WriteStreaming("VAR", "TimeUS,aspd_raw,aspd_filt,roll,raw,cl,fc,dsp,dspb,windx,windy,windz,accx,accy,accz,agl,agl_succ", "Qfffffffffff",
+// @Field: height_baro: height
+    AP::logger().WriteStreaming("VAR", "TimeUS,aspd_raw,aspd_filt,roll,raw,cl,fc,dsp,dspb,windx,windy,windz,accx,accy,accz,height_baro", "Qfffffffffff",
                        AP_HAL::micros64(),
                        (double)aspd,
                        (double)_aspd_filt,
@@ -124,8 +122,7 @@ void LarusVario::update()
                        (double)acceleration.x,
                        (double)acceleration.y,
                        (double)acceleration.z,
-                       (double)_agl,
-                       hagl_succ);
+                       (double)_height_baro);
 }
 
 

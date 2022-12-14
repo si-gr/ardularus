@@ -25,7 +25,7 @@ class LarusVario {
 
     float _expected_thermalling_sink;
 
-    float _agl;
+    float _height_baro;
 
     float _eheight;
 
@@ -78,8 +78,8 @@ public:
     // energy_height = Square(true_airspeed) * INVERSE_2G
     float get_energy_height(void);
 
-    // get agl height, true if success
-    bool get_height_agl(void);
+    // write baro height, true if success
+    void get_height_baro(void);
 
     // TE_altitude = nav_altitude + energy_height;
     float get_te_altitude(void);

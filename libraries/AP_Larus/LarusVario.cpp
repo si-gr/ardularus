@@ -14,7 +14,11 @@ LarusVario::LarusVario(const AP_FixedWing &parms) :
 }
 
 void LarusVario::get_height_baro(void){
-    _height_baro = AP_Baro::get_singleton()->get_altitude();
+    if (AP::ahrs().get_location(_loc)){
+        if(_loc.get_alt_cm(Location::AltFrame::ABSOLUTE, _alt)){
+            _height_baro = (double)_alt / 10.0f;
+        }
+    }
 }
 
 float LarusVario::get_energy_height(void){
@@ -27,7 +31,7 @@ float LarusVario::get_te_altitude(void){
 }
 
 float LarusVario::get_wind_compensation(Vector3f velned, Vector3f wind){
-    return powf(velned.x - wind.x, 2) + powf(velned.y - wind.y, 2) + get_te_altitude();
+    return powf(velned.x - wind.x, 2) + powf(velned.y - wind.y, 2);
 }
 
 void LarusVario::update()
@@ -71,7 +75,7 @@ void LarusVario::update()
 
         wind = _ahrs.wind_estimate();
         acceleration = _ahrs.get_accel() - _ahrs.get_accel_bias();
-        raw_climb_rate = get_wind_compensation(velned, wind);
+        raw_climb_rate = get_wind_compensation(velned, wind) - velned.z;
     }
     
     _climb_filter.set_cutoff_frequency(1/(3*tau));

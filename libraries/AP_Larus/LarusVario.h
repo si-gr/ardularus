@@ -6,7 +6,6 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 #pragma once
 
 #include <AP_AHRS/AP_AHRS.h>
-#include <AP_Baro/AP_Baro.h>
 #include <AP_Param/AP_Param.h>
 #include <Filter/AverageFilter.h>
 #include <AP_Vehicle/AP_FixedWing.h>
@@ -27,7 +26,11 @@ class LarusVario {
 
     float _height_baro;
 
+    int32_t _alt;
+
     float _eheight;
+
+    Location _loc;
 
     
     Vector3f _prev_velned;

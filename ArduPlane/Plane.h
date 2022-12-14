@@ -84,6 +84,9 @@
 #include <AP_LandingGear/AP_LandingGear.h>     // Landing Gear library
 #include <AP_Follow/AP_Follow.h>
 
+
+#include <AP_Larus/LarusVario.h>
+
 #include "GCS_Mavlink.h"
 #include "GCS_Plane.h"
 #include "quadplane.h"
@@ -1111,6 +1114,9 @@ private:
 #if HAL_SOARING_ENABLED
     void update_soaring();
 #endif
+
+    // larus.cpp
+    void update_larus();
 
     // RC_Channel.cpp
     bool emergency_landing;

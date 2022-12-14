@@ -9,6 +9,7 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 #include <AP_Param/AP_Param.h>
 #include <Filter/AverageFilter.h>
 #include <AP_Vehicle/AP_FixedWing.h>
+#include <stdio.h>
 
 class LarusVario {
 
@@ -17,6 +18,9 @@ class LarusVario {
 
     // store time of last update
     uint64_t _prev_update_time;
+
+    // store time of last log
+    uint64_t _prev_log_time;
 
     float _raw_climb_rate;
 
@@ -69,7 +73,6 @@ public:
     
     float alt;
     float reading;
-    float tau;
 
     void update();
     float calculate_aircraft_sinkrate(float phi) const;

@@ -59,7 +59,7 @@ void LarusVario::update()
     float dsp = _vdot_filter.apply(temp);
 
     // Now we need to high-pass this signal to remove bias.
-    _vdotbias_filter.set_cutoff_frequency(1/(20*tau));
+    _vdotbias_filter.set_cutoff_frequency(30.0f);
     float dsp_bias = _vdotbias_filter.apply(temp, dt);
     
     float dsp_cor = dsp - dsp_bias;
@@ -78,7 +78,7 @@ void LarusVario::update()
         raw_climb_rate = get_wind_compensation(velned, wind) - velned.z;
     }
     
-    _climb_filter.set_cutoff_frequency(1/(3*tau));
+    _climb_filter.set_cutoff_frequency(30.0f);
     float smoothed_climb_rate = _climb_filter.apply(raw_climb_rate, dt);
 
     // Compute still-air sinkrate -- unused for now, only netto vario
@@ -90,6 +90,10 @@ void LarusVario::update()
     // Update filters.
 
     _prev_update_time = AP_HAL::micros64();
+    
+    if((float)(AP_HAL::micros64() - _prev_log_time)/1e6 > 10){
+        _prev_log_time = AP_HAL::micros64();
+    
 
 // @LoggerMessage: VAR
 // @Vehicles: Plane
@@ -110,7 +114,7 @@ void LarusVario::update()
 // @Field: accy: wind along Y axis
 // @Field: accz: wind along Z axis
 // @Field: height_baro: height
-    AP::logger().WriteStreaming("VAR", "TimeUS,aspd_raw,aspd_filt,roll,raw,cl,fc,dsp,dspb,windx,windy,windz,accx,accy,accz,height_baro", "Qfffffffffff",
+    AP::logger().WriteStreaming("VAR", "TUS,aspr,aspf,rl,rw,cl,fc,dsp,dspb,windx,wy,wz,ax,ay,az,alt", "Qfffffffffffffff",
                        AP_HAL::micros64(),
                        (double)aspd,
                        (double)_aspd_filt,
@@ -127,6 +131,23 @@ void LarusVario::update()
                        (double)acceleration.y,
                        (double)acceleration.z,
                        (double)_height_baro);
+    printf("aspd: %f, aspd_filt: %f, roll: %f, reading: %f, raw_climb_rate: %f, smoothed_climb_rate: %f, dsp: %f, dsp_bias: %f, wind.x: %f, wind.y: %f, wind.z: %f, acceleration.x: %f, acceleration.y: %f, acceleration.z: %f, height_baro: %f\r\n",
+                       (double)aspd,
+                       (double)_aspd_filt,
+                       (double)roll,
+                       (double)reading,
+                       (double)_raw_climb_rate,
+                       (double)smoothed_climb_rate,
+                       (double)dsp,
+                       (double)dsp_bias,
+                       (double)wind.x,
+                       (double)wind.y,
+                       (double)wind.z,
+                       (double)acceleration.x,
+                       (double)acceleration.y,
+                       (double)acceleration.z,
+                       (double)_height_baro);
+    }
 }
 
 

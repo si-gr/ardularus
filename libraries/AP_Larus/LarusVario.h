@@ -48,6 +48,8 @@ class LarusVario {
     Vector3f _prev_wind;
 
 
+    Vector3f _aspd_vec;
+
     // declares a 5point average filter using floats
     AverageFilterFloat_Size5 _vdot_filter;
 

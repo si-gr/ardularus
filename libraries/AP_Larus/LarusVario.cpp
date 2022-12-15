@@ -80,10 +80,12 @@ void LarusVario::update()
     if (_ahrs.get_velocity_NED(velned)) {
 
         wind = _ahrs.wind_estimate();
-        float current_raw_tot_e = get_wind_compensation(velned, wind) + velned.z + _alt;
+        _ahrs.airspeed_vector_true(_aspd_vec);
+        float current_raw_tot_e = get_wind_compensation(_aspd_vec, wind) + velned.z + (double)_alt;
         _raw_climb_rate = (current_raw_tot_e - _prev_raw_total_energy) / dt;
         _prev_raw_total_energy = current_raw_tot_e;
-        float current_simple_tot_e = (velned - wind) * (velned - wind) + _alt;      // v^2 + h  simplified from 1 / 2 m v^2 + mgh
+        float current_simple_tot_e = ((velned) * (velned) * 0.5f) + (double)_alt * 0.05f;      // v^2 + h  simplified from 1 / 2 m v^2 + mgh
+        current_simple_tot_e = current_simple_tot_e * 0.3f;
         _simple_climb_rate = (current_simple_tot_e - _prev_simple_tot_e) / dt;
         _prev_simple_tot_e = current_simple_tot_e;
     }

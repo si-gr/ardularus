@@ -23,12 +23,18 @@ class LarusVario {
     uint64_t _prev_log_time;
 
     float _raw_climb_rate;
+    
+    float _simple_climb_rate;
 
     float _aspd_filt;
 
     float _expected_thermalling_sink;
 
     float _height_baro;
+
+    float _prev_simple_tot_e;
+
+    float _prev_raw_total_energy;
 
     int32_t _alt;
 
@@ -40,6 +46,7 @@ class LarusVario {
     Vector3f _prev_velned;
 
     Vector3f _prev_wind;
+
 
     // declares a 5point average filter using floats
     AverageFilterFloat_Size5 _vdot_filter;

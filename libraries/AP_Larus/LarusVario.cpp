@@ -67,18 +67,28 @@ void LarusVario::update()
 
     Vector3f velned;
     Vector3f wind;
-    Vector3f acceleration;
+
+    if(_prev_simple_tot_e < 5.0f){
+        _prev_simple_tot_e = _alt;
+    }
+    if(_prev_raw_total_energy < 5.0f){
+        _prev_raw_total_energy = _alt;
+    }
 
 
     float raw_climb_rate = 0.0f;
     if (_ahrs.get_velocity_NED(velned)) {
 
         wind = _ahrs.wind_estimate();
-        acceleration = _ahrs.get_accel() - _ahrs.get_accel_bias();
-        raw_climb_rate = get_wind_compensation(velned, wind) - velned.z;
+        float current_raw_tot_e = get_wind_compensation(velned, wind) + velned.z + _alt;
+        _raw_climb_rate = (current_raw_tot_e - _prev_raw_total_energy) / dt;
+        _prev_raw_total_energy = current_raw_tot_e;
+        float current_simple_tot_e = (velned - wind) * (velned - wind) + _alt;      // v^2 + h  simplified from 1 / 2 m v^2 + mgh
+        _simple_climb_rate = (current_simple_tot_e - _prev_simple_tot_e) / dt;
+        _prev_simple_tot_e = current_simple_tot_e;
     }
     
-    _climb_filter.set_cutoff_frequency(30.0f);
+    _climb_filter.set_cutoff_frequency(5.0f);
     float smoothed_climb_rate = _climb_filter.apply(raw_climb_rate, dt);
 
     // Compute still-air sinkrate -- unused for now, only netto vario
@@ -91,6 +101,7 @@ void LarusVario::update()
 
     _prev_update_time = AP_HAL::micros64();
     
+        // Log at 1/10Hz
     if((float)(AP_HAL::micros64() - _prev_log_time)/1e6 > 10){
         _prev_log_time = AP_HAL::micros64();
     
@@ -110,11 +121,8 @@ void LarusVario::update()
 // @Field: windX: wind along X axis
 // @Field: windY: wind along Y axis
 // @Field: windZ: wind along Z axis
-// @Field: accx: acc along X axis
-// @Field: accy: wind along Y axis
-// @Field: accz: wind along Z axis
 // @Field: height_baro: height
-    AP::logger().WriteStreaming("VAR", "TUS,aspr,aspf,rl,rw,cl,fc,dsp,dspb,windx,wy,wz,ax,ay,az,alt", "Qfffffffffffffff",
+    AP::logger().WriteStreaming("VAR", "TUS,aspr,aspf,rl,rw,cl,fc,dsp,dspb,windx,wy,wz,alt", "Qffffffffffff",
                        AP_HAL::micros64(),
                        (double)aspd,
                        (double)_aspd_filt,
@@ -127,11 +135,8 @@ void LarusVario::update()
                        (double)wind.x,
                        (double)wind.y,
                        (double)wind.z,
-                       (double)acceleration.x,
-                       (double)acceleration.y,
-                       (double)acceleration.z,
                        (double)_height_baro);
-    printf("aspd: %f, aspd_filt: %f, roll: %f, reading: %f, raw_climb_rate: %f, smoothed_climb_rate: %f, dsp: %f, dsp_bias: %f, wind.x: %f, wind.y: %f, wind.z: %f, acceleration.x: %f, acceleration.y: %f, acceleration.z: %f, height_baro: %f\r\n",
+    printf("aspd: %f, aspd_filt: %f, roll: %f, reading: %f, raw_climb_rate: %f, smoothed_climb_rate: %f, dsp: %f, dsp_bias: %f, wind.x: %f, wind.y: %f, wind.z: %f, height_baro: %f, simple: %f\r\n",
                        (double)aspd,
                        (double)_aspd_filt,
                        (double)roll,
@@ -143,10 +148,8 @@ void LarusVario::update()
                        (double)wind.x,
                        (double)wind.y,
                        (double)wind.z,
-                       (double)acceleration.x,
-                       (double)acceleration.y,
-                       (double)acceleration.z,
-                       (double)_height_baro);
+                       (double)_height_baro,
+                       (double)_simple_climb_rate);
     }
 }
 

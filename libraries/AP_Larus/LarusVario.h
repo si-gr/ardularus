@@ -9,11 +9,14 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 #include <AP_Param/AP_Param.h>
 #include <Filter/AverageFilter.h>
 #include <AP_Vehicle/AP_FixedWing.h>
+#include <AP_HAL/AP_HAL.h>
 #include <stdio.h>
+
 
 class LarusVario {
 
 
+    const AP_HAL::HAL& hal = AP_HAL::get_HAL();
     const AP_FixedWing &_aparm;
 
     // store time of last update
@@ -21,6 +24,10 @@ class LarusVario {
 
     // store time of last log
     uint64_t _prev_log_time;
+
+    // uart for the device
+    AP_HAL::UARTDriver *uart;
+    bool _uart_started = false;
 
     float _raw_climb_rate;
     
@@ -35,6 +42,13 @@ class LarusVario {
     float _prev_simple_tot_e;
 
     float _prev_raw_total_energy;
+
+    float _c_l;
+
+    float _alpha;
+
+    const uint8_t _alpha_0_min_aspd = 16; // minimum airspeed for alpha 0 array
+    float _alpha_0 [16];    // array to store alpha 0 values for different airspeeds: 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46 m/s
 
     int32_t _alt;
 
@@ -85,6 +99,10 @@ public:
 
     void update();
     float calculate_aircraft_sinkrate(float phi) const;
+
+    void start_uart(void);
+
+    void send_uart(uint8_t *buffer, uint8_t buffer_len);
 
     float get_smoothed_climb(void);
 

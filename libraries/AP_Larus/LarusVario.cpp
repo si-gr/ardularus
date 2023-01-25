@@ -6,11 +6,28 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 
 #include <AP_Logger/AP_Logger.h>
 
+
 LarusVario::LarusVario(const AP_FixedWing &parms) :
 //LarusVario::LarusVario(const AP_FixedWing &parms, const PolarParams &polarParams) :
     _aparm(parms)
 {
     AP::ahrs().set_wind_estimation_enabled(true);
+    uart = hal.serial(5);
+}
+
+void LarusVario::start_uart(void){
+    //uart->configure_parity(0);
+    //uart->set_stop_bits(1);
+    //uart->set_flow_control(AP_HAL::UARTDriver::FLOW_CONTROL_DISABLE);
+    //uart->set_blocking_writes(false);   // updates run in the main thread
+    //uart->set_options(AP_HAL::UARTDriver::OPTION_NODMA_TX | AP_HAL::UARTDriver::OPTION_NODMA_RX);
+    uart->begin(115200, 512, 512);
+    //uart->discard_input();
+}
+
+void LarusVario::send_uart(uint8_t *buffer, uint8_t buffer_len){
+    uart->write(buffer, buffer_len);
+    uart->flush();
 }
 
 void LarusVario::get_height_baro(void){
@@ -36,6 +53,11 @@ float LarusVario::get_wind_compensation(Vector3f velned, Vector3f wind){
 
 void LarusVario::update()
 {
+    if(!_uart_started){
+        start_uart();
+        _uart_started = true;
+    }
+
     const AP_AHRS &_ahrs = AP::ahrs();
     get_height_baro();
     float aspd = 0;
@@ -43,11 +65,22 @@ void LarusVario::update()
             aspd = _aparm.airspeed_cruise_cm * 0.01f;
     }
 
+    // Save alpha 0 if we are in a level flight, not accelerating
+    if (aspd > _alpha_0_min_aspd){
+        if (abs(_ahrs.get_accel().z - 1.0) < 0.1 ) {
+            _alpha_0[MIN(((uint8_t)aspd) - _alpha_0_min_aspd, 0)] = _alpha_0[MIN(((uint8_t)aspd) - _alpha_0_min_aspd, 0)] * 0.9 + _ahrs.get_pitch() * 0.1;
+        }
+    }
+    
     _aspd_filt = _sp_filter.apply(aspd);
 
     get_energy_height();
 
+    _c_l = _ahrs.get_accel().z / powf(_aspd_filt, 2);
+    
+    _alpha = _c_l + _alpha_0[MIN(((uint8_t)_aspd_filt) - _alpha_0_min_aspd, 0)];
     float dt = (float)(AP_HAL::micros64() - _prev_update_time)/1e6;
+
 
     // Logic borrowed from AP_TECS.cpp
     // Update and average speed rate of change
@@ -92,7 +125,7 @@ void LarusVario::update()
     
     _climb_filter.set_cutoff_frequency(5.0f);
     float smoothed_climb_rate = _climb_filter.apply(raw_climb_rate, dt);
-
+    //send_uart((uint8_t*)&smoothed_climb_rate, sizeof(smoothed_climb_rate));
     // Compute still-air sinkrate -- unused for now, only netto vario
     float roll = _ahrs.roll;
     //float sinkrate = calculate_aircraft_sinkrate(roll);
@@ -103,6 +136,8 @@ void LarusVario::update()
 
     _prev_update_time = AP_HAL::micros64();
     
+    uart->printf("test print larus %.4f %.4f %.4f\r\n", (double)roll, (double)_height_baro, (double)aspd);
+
         // Log at 1/10Hz
     if((float)(AP_HAL::micros64() - _prev_log_time)/1e6 > 10){
         _prev_log_time = AP_HAL::micros64();
@@ -153,6 +188,8 @@ void LarusVario::update()
                        (double)_height_baro,
                        (double)_simple_climb_rate);
     }
+
+    //uart8->printf("test print larus p8 %f\r\n", (double)roll);
 }
 
 

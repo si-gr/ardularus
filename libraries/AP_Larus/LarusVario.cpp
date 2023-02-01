@@ -136,7 +136,7 @@ void LarusVario::update()
 
     _prev_update_time = AP_HAL::micros64();
     
-    uart->printf("test print larus %.4f %.4f %.4f\r\n", (double)roll, (double)_height_baro, (double)aspd);
+    //uart->printf("test print larus %.4f %.4f %.4f\r\n", (double)roll, (double)_height_baro, (double)aspd);
 
         // Log at 1/10Hz
     if((float)(AP_HAL::micros64() - _prev_log_time)/1e6 > 10){

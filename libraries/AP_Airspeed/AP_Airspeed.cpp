@@ -41,6 +41,7 @@
 #include "AP_Airspeed_MS5525.h"
 #include "AP_Airspeed_SDP3X.h"
 #include "AP_Airspeed_DLVR.h"
+#include "AP_Airspeed_DLLR.h"
 #include "AP_Airspeed_analog.h"
 #include "AP_Airspeed_ASP5033.h"
 #include "AP_Airspeed_Backend.h"
@@ -473,6 +474,11 @@ void AP_Airspeed::init()
 #if AP_AIRSPEED_DLVR_ENABLED
             sensor[i] = new AP_Airspeed_DLVR(*this, i, 60);
 #endif  // AP_AIRSPEED_DLVR_ENABLED
+            break;
+        case TYPE_I2C_DLLR_10IG:
+#if AP_AIRSPEED_DLLR_ENABLED
+            sensor[i] = new AP_Airspeed_DLLR(*this, i, 10);
+#endif
             break;
         case TYPE_I2C_ASP5033:
 #if AP_AIRSPEED_ASP5033_ENABLED

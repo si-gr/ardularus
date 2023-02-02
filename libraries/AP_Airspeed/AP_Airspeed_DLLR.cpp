@@ -179,9 +179,8 @@ void AP_Airspeed_DLLR::timer()
                              (raw_bytes[5] << 8) |
                              raw_bytes[6];
 
-    float pcorr = pnorm;// + (DLLR_ABCD[0] * powf(pnorm, 3.0f) + DLLR_ABCD[1] * powf(pnorm, 2.0f) + DLLR_ABCD[2] * pnorm + DLLR_ABCD[3]);
-    float pcorr_ranged = pcorr;
-    int32_t iPcorr = (int32_t)(pcorr * (float)MAX_24B_VAL) + 0x800000;  // Convert +/- 1.0f to 24-bit signed integer -0.7990 * (2^23 - 1) + 8 388 608 = 15 091 104.993
+    float pcorr = pnorm + (DLLR_ABCD[0] * powf(pnorm, 3.0f) + DLLR_ABCD[1] * powf(pnorm, 2.0f) + DLLR_ABCD[2] * pnorm + DLLR_ABCD[3]);
+    //int32_t iPcorr = (int32_t)(pcorr * (float)MAX_24B_VAL) + 0x800000;  // Convert +/- 1.0f to 24-bit signed integer -0.7990 * (2^23 - 1) + 8 388 608 = 15 091 104.993
 
     // Compute difference from reference temperature, in sensor counts:
     temperature_data = temperature_data - Tref_Counts;
@@ -203,7 +202,7 @@ void AP_Airspeed_DLLR::timer()
     pressure =                  1.25f * (((float)(pcomp) - 0.1f * f2p24)/ f2p24) * 2488.4f;
     //float pressure_no_comp =    1.25f * (((float)(iPcorr) - 0.1f * f2p24)/ f2p24) * 2488.4f;
     temperature = ((float)(temperature_data + Tref_Counts) * 125.f)/f2p24 - 40.f;
-    //uart->printf("t %.2f p %.4f punc %.4f\r\n", temperature, pressure, pressure_no_comp);
+    uart->printf("t %.2f p %.4f\r\n", temperature, pressure);
     //uart->printf("a %.4f b %.4f c %.4f d %.4f tcor %.4f\r\n", DLLR_ABCD[0], DLLR_ABCD[1], DLLR_ABCD[2], DLLR_ABCD[3], tcorr);
     //uart->printf("pcorr %.8f pcorr_ranged %.8f\r\n", pcorr, pcorr_ranged);
     

@@ -30,8 +30,7 @@ extern const AP_HAL::HAL &hal;
 
 
 AP_Airspeed_DLLR::AP_Airspeed_DLLR(AP_Airspeed &_frontend, uint8_t _instance, const float _range_inH2O) :
-    AP_Airspeed_Backend(_frontend, _instance),
-    range_inH2O(_range_inH2O)
+    AP_Airspeed_Backend(_frontend, _instance)
 {}
 
 /*
@@ -124,7 +123,7 @@ void AP_Airspeed_DLLR::_measure()
 {
     
     uart->printf("start measure\r\n");
-    uint8_t cmd = 0xAA;
+    uint8_t cmd = 0xAD; // get average4 values
     if (dev->transfer(&cmd, 1, nullptr, 0)) {
         _measurement_started_ms = AP_HAL::millis();
     }
@@ -139,6 +138,8 @@ void AP_Airspeed_DLLR::_measure()
 
 #define DLLR_OFFSET 8192.0f
 #define DLLR_SCALE 16384.0f
+#define MAX_24B_VAL 0x7FFFFF
+#define MAX_32B_VAL 0x7FFFFFFF
 
 
 // 30Hz timer
@@ -151,6 +152,7 @@ void AP_Airspeed_DLLR::timer()
     }
     if(eeprom_finished == 10){
         for(uint8_t i = 0; i < 4; i++){
+            uart->printf("converting %d - %d\r\n", i, (int)i32_ABCD[i]);
             DLLR_ABCD[i] = ((float)(i32_ABCD[i])) / ((float)(0x7FFFFFFF));
         }
         eeprom_finished++;
@@ -164,22 +166,22 @@ void AP_Airspeed_DLLR::timer()
         }
         return;
     }
-    uart->write(raw_bytes, sizeof(raw_bytes));
 
     uint32_t pressure_data = (raw_bytes[1] << 16) |
                              (raw_bytes[2] << 8) |
                              raw_bytes[3];
-    pressure_data -= 0x800000;
-    float pnorm = (float)pressure_data;
-    pnorm /= (float)0x7FFFFF;
+    //pressure_data -= 0x800000;
+    float pnorm = (float)pressure_data - (float)0x800000;
+    pnorm /= (float)MAX_24B_VAL;    // Normalize to +/- 1.0
 
 
     int32_t temperature_data = (raw_bytes[4] << 16) |
                              (raw_bytes[5] << 8) |
                              raw_bytes[6];
 
-    float pcorr = pnorm + (DLLR_ABCD[0] * pow(pnorm, 3.0f) + DLLR_ABCD[1] * pow(pnorm, 2.0f) + DLLR_ABCD[2] * pnorm + DLLR_ABCD[3]);
-    int32_t iPcorr = (int32_t)(pcorr * (float)0x7FFFFF) + 0x800000;
+    float pcorr = pnorm;// + (DLLR_ABCD[0] * powf(pnorm, 3.0f) + DLLR_ABCD[1] * powf(pnorm, 2.0f) + DLLR_ABCD[2] * pnorm + DLLR_ABCD[3]);
+    float pcorr_ranged = pcorr;
+    int32_t iPcorr = (int32_t)(pcorr * (float)MAX_24B_VAL) + 0x800000;  // Convert +/- 1.0f to 24-bit signed integer -0.7990 * (2^23 - 1) + 8 388 608 = 15 091 104.993
 
     // Compute difference from reference temperature, in sensor counts:
     temperature_data = temperature_data - Tref_Counts;
@@ -189,17 +191,21 @@ void AP_Airspeed_DLLR::timer()
     } else {
         temp_correction = TC50L;
     }
-    pcorr = (pcorr + 1.0f) / 2.0f;
+    pcorr = (pcorr + 1.0f) / 2.0f;  // value between 0 and 1
     if(pcorr > 0.5f) {
         pcorr = pcorr - 0.5f;
     } else {
         pcorr = 0.5f - pcorr;
     }
-    float tcorr = (1.0f - (DLLR_E * 2.5f * pcorr)) * temperature_data * temp_correction / TCKScale;
+    float tcorr = (1.0f - (DLLR_E * 2.5f * pcorr)) * temperature_data * temp_correction / TCKScale; // value between 0 and 1
     pcorr = pcorr - tcorr;
-    pcomp = (uint32_t) (pcorr * (float)0xFFFFFF);
-    pressure = 1.25f * ((pcomp - 0.1f * pow(2.f, 24.f))/ pow(2.0f, 24.0f)) * 2488.4f;
-    uart->printf("t %.2f p %.4f punc %.4f\r\n", (float)((float)temperature_data * 125.f)/pow(2.f,24.f) - 40.f, pressure, 1.25f * ((iPcorr - 0.1f * pow(2.f, 24.f))/ pow(2.0f, 24.0f)) * 2488.4f);
+    pcomp = abs((int32_t) ((pcorr - 1.0f) * 2 * (float)MAX_24B_VAL) + 0x800000);   // 0.3995 * (2^24 - 1) = 6 702 497.3925
+    pressure =                  1.25f * (((float)(pcomp) - 0.1f * f2p24)/ f2p24) * 2488.4f;
+    //float pressure_no_comp =    1.25f * (((float)(iPcorr) - 0.1f * f2p24)/ f2p24) * 2488.4f;
+    temperature = ((float)(temperature_data + Tref_Counts) * 125.f)/f2p24 - 40.f;
+    //uart->printf("t %.2f p %.4f punc %.4f\r\n", temperature, pressure, pressure_no_comp);
+    //uart->printf("a %.4f b %.4f c %.4f d %.4f tcor %.4f\r\n", DLLR_ABCD[0], DLLR_ABCD[1], DLLR_ABCD[2], DLLR_ABCD[3], tcorr);
+    //uart->printf("pcorr %.8f pcorr_ranged %.8f\r\n", pcorr, pcorr_ranged);
     
 
     WITH_SEMAPHORE(sem);
@@ -228,12 +234,6 @@ bool AP_Airspeed_DLLR::get_temperature(float &_temperature)
 
     if ((AP_HAL::millis() - last_sample_time_ms) > 100) {
         return false;
-    }
-
-    if (temp_count > 0) {
-        temperature = temperature_sum / temp_count;
-        temp_count = 0;
-        temperature_sum = 0;
     }
 
     _temperature = temperature;

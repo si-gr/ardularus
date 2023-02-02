@@ -83,19 +83,16 @@ private:
 
     const uint32_t Tref_Counts = 8724019;
     const float TCKScale = 100.0 * 100.0 * 134218.0;
-    uint32_t pcomp = 0;
+    int32_t pcomp = 0;
+
+    const float f2p24 = 16777216.0;
 
     AP_HAL::UARTDriver *uart;
     uint32_t _measurement_started_ms;
     float pressure;
     float temperature;
-    float temperature_sum;
-    float pressure_sum;
-    uint32_t temp_count;
-    uint32_t press_count;
     
     uint32_t last_sample_time_ms;
-    const float range_inH2O;
 
     // initialise the sensor
     void setup();

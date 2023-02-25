@@ -159,3 +159,12 @@ for reviewing patches on their specific area.
   - ***Subsystem***: ESP32,AP_HAL_ESP32
 - [Charles Villard ](https://github.com/Silvanosky):
   - ***Subsystem***: ESP32,AP_HAL_ESP32
+
+
+
+## Larus ##
+
+- Compile with /waf plane -v in the ardupilot directory
+- To flash press Boot-Button when connecting -> DFU Mode
+- Flash ardupilot with bl (Bootloader)
+- UART 8 is uart = hal.serial(5);

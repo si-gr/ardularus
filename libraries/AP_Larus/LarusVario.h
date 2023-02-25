@@ -55,11 +55,13 @@ class LarusVario {
         float ground_course;
         int16_t yaw;
 
-        uint16_t prev_raw_total_energy;
-        uint16_t prev_simple_total_energy;
-        uint16_t reading;
-        uint16_t raw_climb_rate;
-        uint16_t smoothed_climb_rate;
+        float prev_raw_total_energy;
+        float prev_simple_total_energy;
+        float raw_climb_rate;
+        float simple_climb_rate;
+        int16_t reading;
+        
+        int16_t smoothed_climb_rate;
         float height_baro;
         float dsp;
         

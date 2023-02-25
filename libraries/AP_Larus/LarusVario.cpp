@@ -162,14 +162,16 @@ void LarusVario::update()
     _larus_variables.ground_course = AP::gps().ground_course();   // 4B
     _larus_variables.yaw = (int16_t)((_ahrs.yaw / M_PI) * (float)(0x8000));    // 2B 
 
-    _larus_variables.raw_climb_rate = (uint16_t)(_raw_climb_rate * 100.0);   // 2B
-    _larus_variables.prev_raw_total_energy = (uint16_t)(_prev_raw_total_energy * 100.0);   // 2B
-    _larus_variables.prev_simple_total_energy = (uint16_t)(_prev_simple_tot_e * 100.0);   // 2B
-    _larus_variables.reading = (uint16_t)(reading * 100.0);   // 2B
-    _larus_variables.smoothed_climb_rate = (uint16_t)(smoothed_climb_rate * 100.0);   // 2B
-    _larus_variables.height_baro = _height_baro;   // 4B
-    _larus_variables.dsp = dsp;   // 4B
+    _larus_variables.prev_raw_total_energy = _prev_raw_total_energy;   // 4B
+    _larus_variables.prev_simple_total_energy = _prev_simple_tot_e;   // 4B
+    _larus_variables.raw_climb_rate = _raw_climb_rate;   // 4B
+    _larus_variables.simple_climb_rate = _simple_climb_rate;   // 4B
+    _larus_variables.reading = (int16_t)(reading * 100.0);   // 2B
     
+    //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
+    //_larus_variables.height_baro = _height_baro;   // 4B
+    //_larus_variables.dsp = dsp;   // 4B
+
     _larus_variables.dsp_bias = dsp_bias;
     
     uart->write((uint8_t*)&_larus_variables + (_ble_msg_count * 18), 18);//sizeof(_larus_variables));

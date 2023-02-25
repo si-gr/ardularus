@@ -10,6 +10,8 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 #include <Filter/AverageFilter.h>
 #include <AP_Vehicle/AP_FixedWing.h>
 #include <AP_HAL/AP_HAL.h>
+
+#include <AP_GPS/AP_GPS.h>
 #include <stdio.h>
 
 
@@ -18,6 +20,9 @@ class LarusVario {
 
     const AP_HAL::HAL& hal = AP_HAL::get_HAL();
     const AP_FixedWing &_aparm;
+    const uint8_t _ble_msg_length = 20;
+    const AP_Airspeed *aspeed = AP::airspeed();
+    uint8_t _ble_msg_count = 0;
 
     // store time of last update
     uint64_t _prev_update_time;
@@ -27,6 +32,40 @@ class LarusVario {
 
     // uart for the device
     AP_HAL::UARTDriver *uart;
+    
+    float _uart_buffer [24];
+
+    struct larus_variables {
+        float airspeed;
+        //float airspeed_filtered;
+        float airspeed_vector_x;
+        float airspeed_vector_y;
+        float airspeed_vector_z;
+        int16_t roll;
+        
+        float wind_vector_x;
+        float wind_vector_y;
+        float wind_vector_z;
+        float height_gps;
+        int16_t pitch;
+
+        int32_t latitude;
+        int32_t longitude;
+        float ground_speed;
+        float ground_course;
+        int16_t yaw;
+
+        uint16_t prev_raw_total_energy;
+        uint16_t prev_simple_total_energy;
+        uint16_t reading;
+        uint16_t raw_climb_rate;
+        uint16_t smoothed_climb_rate;
+        float height_baro;
+        float dsp;
+        
+        float dsp_bias;
+    } _larus_variables;
+
     bool _uart_started = false;
 
     float _raw_climb_rate;
@@ -39,9 +78,9 @@ class LarusVario {
 
     float _height_baro;
 
-    float _prev_simple_tot_e;
+    float _prev_simple_tot_e;   // AHRS total energy with z axis projection
 
-    float _prev_raw_total_energy;
+    float _prev_raw_total_energy;   // Wind compensated total energy with z axis projection
 
     float _c_l;
 
@@ -55,7 +94,6 @@ class LarusVario {
     float _eheight;
 
     Location _loc;
-
     
     Vector3f _prev_velned;
 

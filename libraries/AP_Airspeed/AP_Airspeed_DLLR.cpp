@@ -24,6 +24,7 @@
 #include <AP_Math/AP_Math.h>
 
 extern const AP_HAL::HAL &hal;
+//#define DLLR_DEBUG_UART
 
 #define DLLR_I2C_ADDR 0x29
 # define Debug(fmt, args ...)  do {hal.console->printf("%s:%d: " fmt "\n", __FUNCTION__, __LINE__, ## args); hal.scheduler->delay(1); } while(0)
@@ -103,14 +104,18 @@ void AP_Airspeed_DLLR::setup()
 
 // probe and initialise the sensor
 bool AP_Airspeed_DLLR::init()
-{
+{   
+    #ifdef DLLR_DEBUG_UART
     uart = hal.serial(5);
     uart->printf("airspeed init\r\n");
+    #endif
     dev = hal.i2c_mgr->get_device(get_bus(), DLLR_I2C_ADDR);
     if (!dev) {
+    #ifdef DLLR_DEBUG_UART
         uart->printf("init fail\r\n");
         uart->printf("get bus %d\r\n", (int)get_bus());
         uart->printf("get bus %d\r\n", (int)DLLR_I2C_ADDR);
+    #endif
         return false;
     }
     setup();
@@ -121,8 +126,9 @@ bool AP_Airspeed_DLLR::init()
 // start a measurement
 void AP_Airspeed_DLLR::_measure()
 {
-    
+    #ifdef DLLR_DEBUG_UART
     uart->printf("start measure\r\n");
+    #endif
     uint8_t cmd = 0xAD; // get average4 values
     if (dev->transfer(&cmd, 1, nullptr, 0)) {
         _measurement_started_ms = AP_HAL::millis();
@@ -152,7 +158,9 @@ void AP_Airspeed_DLLR::timer()
     }
     if(eeprom_finished == 10){
         for(uint8_t i = 0; i < 4; i++){
+            #ifdef DLLR_DEBUG_UART
             uart->printf("converting %d - %d\r\n", i, (int)i32_ABCD[i]);
+            #endif
             DLLR_ABCD[i] = ((float)(i32_ABCD[i])) / ((float)(0x7FFFFFFF));
         }
         eeprom_finished++;
@@ -160,7 +168,9 @@ void AP_Airspeed_DLLR::timer()
 
     uint8_t raw_bytes[7];
     if (!dev->read((uint8_t *)&raw_bytes, sizeof(raw_bytes))) {
+        #ifdef DLLR_DEBUG_UART
         uart->printf("read fail\r\n");
+        #endif
         if(AP_HAL::millis() - _measurement_started_ms > 30){
             _measure();
         }
@@ -202,9 +212,11 @@ void AP_Airspeed_DLLR::timer()
     pressure =                  1.25f * (((float)(pcomp) - 0.1f * f2p24)/ f2p24) * 2488.4f;
     //float pressure_no_comp =    1.25f * (((float)(iPcorr) - 0.1f * f2p24)/ f2p24) * 2488.4f;
     temperature = ((float)(temperature_data + Tref_Counts) * 125.f)/f2p24 - 40.f;
+    #ifdef DLLR_DEBUG_UART
     uart->printf("t %.2f p %.4f\r\n", temperature, pressure);
-    //uart->printf("a %.4f b %.4f c %.4f d %.4f tcor %.4f\r\n", DLLR_ABCD[0], DLLR_ABCD[1], DLLR_ABCD[2], DLLR_ABCD[3], tcorr);
-    //uart->printf("pcorr %.8f pcorr_ranged %.8f\r\n", pcorr, pcorr_ranged);
+    uart->printf("a %.4f b %.4f c %.4f d %.4f tcor %.4f\r\n", DLLR_ABCD[0], DLLR_ABCD[1], DLLR_ABCD[2], DLLR_ABCD[3], tcorr);
+    uart->printf("pcorr %.8f pcorr_ranged %.8f\r\n", pcorr, pcorr_ranged);
+    #endif
     
 
     WITH_SEMAPHORE(sem);

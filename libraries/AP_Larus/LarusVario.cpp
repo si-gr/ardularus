@@ -14,6 +14,7 @@ LarusVario::LarusVario(const AP_FixedWing &parms) :
 {
     AP::ahrs().set_wind_estimation_enabled(true);
     uart = hal.serial(5);
+    _uart_buffer = new uint8_t[18];
 }
 
 void LarusVario::start_uart(void){
@@ -175,14 +176,57 @@ void LarusVario::update()
     _larus_variables.velned_velocity_y = (int16_t)(velned.y * 500);   // 2B
     _larus_variables.velned_velocity_z = (int16_t)(velned.z * 500);   // 2B
 
+    _larus_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 1000);   // 2B
+
     
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
     //_larus_variables.height_baro = _height_baro;   // 4B
     //_larus_variables.dsp = dsp;   // 4B
 
     _larus_variables.dsp_bias = dsp_bias;
+    if (_ble_msg_count == 0) {
+        memcpy(_uart_buffer, &_larus_variables.airspeed, sizeof(_larus_variables.airspeed));
+        memcpy(_uart_buffer + 4, &_larus_variables.airspeed_vector_x, sizeof(_larus_variables.airspeed_vector_x));
+        memcpy(_uart_buffer + 8, &_larus_variables.airspeed_vector_y, sizeof(_larus_variables.airspeed_vector_y));
+        memcpy(_uart_buffer + 12, &_larus_variables.airspeed_vector_z, sizeof(_larus_variables.airspeed_vector_z));
+        memcpy(_uart_buffer + 16, &_larus_variables.roll, sizeof(_larus_variables.roll));
+    } else if (_ble_msg_count == 1)
+    {
+        memcpy(_uart_buffer, &_larus_variables.wind_vector_x, sizeof(_larus_variables.wind_vector_x));
+        memcpy(_uart_buffer + 4, &_larus_variables.wind_vector_y, sizeof(_larus_variables.wind_vector_y));
+        memcpy(_uart_buffer + 8, &_larus_variables.wind_vector_z, sizeof(_larus_variables.wind_vector_z));
+        memcpy(_uart_buffer + 12, &_larus_variables.height_gps, sizeof(_larus_variables.height_gps));
+        memcpy(_uart_buffer + 16, &_larus_variables.pitch, sizeof(_larus_variables.pitch));
+    } else if (_ble_msg_count == 2)
+    {
+        memcpy(_uart_buffer, &_larus_variables.ground_course, sizeof(_larus_variables.ground_course));
+        memcpy(_uart_buffer + 4, &_larus_variables.latitude, sizeof(_larus_variables.latitude));
+        memcpy(_uart_buffer + 8, &_larus_variables.longitude, sizeof(_larus_variables.longitude));
+        memcpy(_uart_buffer + 12, &_larus_variables.ground_speed, sizeof(_larus_variables.ground_speed));
+        memcpy(_uart_buffer + 16, &_larus_variables.yaw, sizeof(_larus_variables.yaw));
+    } else if (_ble_msg_count == 3)
+    {
+        memcpy(_uart_buffer, &_larus_variables.prev_raw_total_energy, sizeof(_larus_variables.prev_raw_total_energy));
+        memcpy(_uart_buffer + 4, &_larus_variables.prev_simple_total_energy, sizeof(_larus_variables.prev_simple_total_energy));
+        memcpy(_uart_buffer + 8, &_larus_variables.raw_climb_rate, sizeof(_larus_variables.raw_climb_rate));
+        memcpy(_uart_buffer + 12, &_larus_variables.simple_climb_rate, sizeof(_larus_variables.simple_climb_rate));
+        memcpy(_uart_buffer + 16, &_larus_variables.reading, sizeof(_larus_variables.reading));
+    } else if (_ble_msg_count == 4)
+    {
+        memcpy(_uart_buffer, &_larus_variables.gps_velocity_x, sizeof(_larus_variables.gps_velocity_x));
+        memcpy(_uart_buffer + 2, &_larus_variables.gps_velocity_y, sizeof(_larus_variables.gps_velocity_y));
+        memcpy(_uart_buffer + 4, &_larus_variables.gps_velocity_z, sizeof(_larus_variables.gps_velocity_z));
+        memcpy(_uart_buffer + 6, &_larus_variables.velned_velocity_x, sizeof(_larus_variables.velned_velocity_x));
+        memcpy(_uart_buffer + 8, &_larus_variables.velned_velocity_y, sizeof(_larus_variables.velned_velocity_y));
+        memcpy(_uart_buffer + 10, &_larus_variables.velned_velocity_z, sizeof(_larus_variables.velned_velocity_z));
+        memcpy(_uart_buffer + 12, &_larus_variables.smoothed_climb_rate, sizeof(_larus_variables.smoothed_climb_rate));
+        memcpy(_uart_buffer + 14, &_larus_variables.height_baro, sizeof(_larus_variables.height_baro));
+        //memcpy(&_uart_buffer + 16, &_larus_variables.acc_z, sizeof(_larus_variables.acc_z));
+        
+    }
     
-    uart->write((uint8_t*)&_larus_variables + (_ble_msg_count * 18), 18);//sizeof(_larus_variables));
+    
+    uart->write(_uart_buffer, 18);//sizeof(_larus_variables));
     uart->write((uint8_t)_ble_msg_count);
     uart->flush();
     _ble_msg_count++;

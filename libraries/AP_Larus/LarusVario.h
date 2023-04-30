@@ -33,7 +33,7 @@ class LarusVario {
     // uart for the device
     AP_HAL::UARTDriver *uart;
     
-    float _uart_buffer [24];
+    uint8_t *_uart_buffer;
 
     struct larus_variables {
         float airspeed;
@@ -73,6 +73,7 @@ class LarusVario {
         float dsp;
         
         float dsp_bias;
+        int16_t acc_z;
     } _larus_variables;
 
     bool _uart_started = false;

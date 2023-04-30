@@ -46,13 +46,13 @@ class LarusVario {
         float wind_vector_x;
         float wind_vector_y;
         float wind_vector_z;
-        float height_gps;
+        int32_t height_gps;
         int16_t pitch;
 
+        float ground_course;
         int32_t latitude;
         int32_t longitude;
         float ground_speed;
-        float ground_course;
         int16_t yaw;
 
         float prev_raw_total_energy;
@@ -60,6 +60,13 @@ class LarusVario {
         float raw_climb_rate;
         float simple_climb_rate;
         int16_t reading;
+
+        int16_t gps_velocity_x;
+        int16_t gps_velocity_y;
+        int16_t gps_velocity_z;
+        int16_t velned_velocity_x;
+        int16_t velned_velocity_y;
+        int16_t velned_velocity_z;
         
         int16_t smoothed_climb_rate;
         float height_baro;

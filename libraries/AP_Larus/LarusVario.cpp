@@ -125,10 +125,10 @@ void LarusVario::update()
     }
     
     _climb_filter.set_cutoff_frequency(5.0f);
-    float smoothed_climb_rate = _climb_filter.apply(raw_climb_rate, dt);
+    //float smoothed_climb_rate = _climb_filter.apply(raw_climb_rate, dt);
     //send_uart((uint8_t*)&smoothed_climb_rate, sizeof(smoothed_climb_rate));
     // Compute still-air sinkrate -- unused for now, only netto vario
-    float roll = _ahrs.roll;
+    //float roll = _ahrs.roll;
     //float sinkrate = calculate_aircraft_sinkrate(roll);
 
     reading = raw_climb_rate + dsp_cor*_aspd_filt/GRAVITY_MSS;
@@ -167,6 +167,14 @@ void LarusVario::update()
     _larus_variables.raw_climb_rate = _raw_climb_rate;   // 4B
     _larus_variables.simple_climb_rate = _simple_climb_rate;   // 4B
     _larus_variables.reading = (int16_t)(reading * 100.0);   // 2B
+
+    _larus_variables.gps_velocity_x = (int16_t)(AP::gps().velocity().x * 500);   // 2B
+    _larus_variables.gps_velocity_y = (int16_t)(AP::gps().velocity().y * 500);   // 2B
+    _larus_variables.gps_velocity_z = (int16_t)(AP::gps().velocity().z * 500);   // 2B
+    _larus_variables.velned_velocity_x = (int16_t)(velned.x * 500);   // 2B
+    _larus_variables.velned_velocity_y = (int16_t)(velned.y * 500);   // 2B
+    _larus_variables.velned_velocity_z = (int16_t)(velned.z * 500);   // 2B
+
     
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
     //_larus_variables.height_baro = _height_baro;   // 4B
@@ -178,7 +186,7 @@ void LarusVario::update()
     uart->write((uint8_t)_ble_msg_count);
     uart->flush();
     _ble_msg_count++;
-    _ble_msg_count %= 4;
+    _ble_msg_count %= 5;
     
     //uart->write(0x0d);
     //uart->flush();
@@ -208,7 +216,7 @@ void LarusVario::update()
 // @Field: windY: wind along Y axis
 // @Field: windZ: wind along Z axis
 // @Field: height_baro: height
-
+/*
     AP::logger().WriteStreaming("VAR", "TUS,aspr,aspf,rl,rw,cl,fc,dsp,dspb,windx,wy,wz,alt", "Qffffffffffff",
                        AP_HAL::micros64(),
                        (double)aspd,
@@ -222,7 +230,7 @@ void LarusVario::update()
                        (double)wind.x,
                        (double)wind.y,
                        (double)wind.z,
-                       (double)_height_baro);
+                       (double)_height_baro);*/
     /*printf("aspd: %f, aspd_filt: %f, roll: %f, reading: %f, raw_climb_rate: %f, smoothed_climb_rate: %f, dsp: %f, dsp_bias: %f, wind.x: %f, wind.y: %f, wind.z: %f, height_baro: %f, simple: %f\r\n",
                        (double)aspd,
                        (double)_aspd_filt,

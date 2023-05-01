@@ -215,7 +215,7 @@ void AP_Airspeed_DLLR::timer()
     #ifdef DLLR_DEBUG_UART
     uart->printf("t %.2f p %.4f\r\n", temperature, pressure);
     uart->printf("a %.4f b %.4f c %.4f d %.4f tcor %.4f\r\n", DLLR_ABCD[0], DLLR_ABCD[1], DLLR_ABCD[2], DLLR_ABCD[3], tcorr);
-    uart->printf("pcorr %.8f pcorr_ranged %.8f\r\n", pcorr, pcorr_ranged);
+    uart->printf("pcorr %.8f \r\n", pcorr);
     #endif
     
 

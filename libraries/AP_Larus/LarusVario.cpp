@@ -14,7 +14,7 @@ LarusVario::LarusVario(const AP_FixedWing &parms) :
 {
     AP::ahrs().set_wind_estimation_enabled(true);
     uart = hal.serial(5);
-    _uart_buffer = new uint8_t[18];
+    _uart_buffer = new uint8_t[20];
 }
 
 void LarusVario::start_uart(void){
@@ -225,9 +225,9 @@ void LarusVario::update()
         
     }
     
-    
-    uart->write(_uart_buffer, 18);//sizeof(_larus_variables));
-    uart->write((uint8_t)_ble_msg_count);
+    _uart_buffer[18] = _ble_msg_count;
+    uart->write(_uart_buffer, 19);//sizeof(_larus_variables));
+    //uart->write((uint8_t)_ble_msg_count);
     uart->flush();
     _ble_msg_count++;
     _ble_msg_count %= 5;

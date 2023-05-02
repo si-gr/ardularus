@@ -222,7 +222,9 @@ void AP_Airspeed_DLLR::timer()
     WITH_SEMAPHORE(sem);
 
     last_sample_time_ms = AP_HAL::millis();
-    _measure();
+    if(AP_HAL::millis() - _measurement_started_ms > 30){
+        _measure();
+    }
 }
 
 // return the current differential_pressure in Pascal

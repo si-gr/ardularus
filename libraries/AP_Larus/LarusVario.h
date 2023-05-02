@@ -10,6 +10,7 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 #include <Filter/AverageFilter.h>
 #include <AP_Vehicle/AP_FixedWing.h>
 #include <AP_HAL/AP_HAL.h>
+#include <AP_BattMonitor/AP_BattMonitor.h>
 
 #include <AP_GPS/AP_GPS.h>
 #include <stdio.h>
@@ -20,9 +21,11 @@ class LarusVario {
 
     const AP_HAL::HAL& hal = AP_HAL::get_HAL();
     const AP_FixedWing &_aparm;
-    const uint8_t _ble_msg_length = 20;
-    const AP_Airspeed *aspeed = AP::airspeed();
+    const uint8_t _ble_msg_length = 18;
+    AP_Airspeed *aspeed = AP::airspeed();
+    const AP_BattMonitor &battery = AP::battery();
     uint8_t _ble_msg_count = 0;
+    const uint8_t _num_messages = sizeof(larus_variables) / _ble_msg_length;
 
     // store time of last update
     uint64_t _prev_update_time;
@@ -33,9 +36,9 @@ class LarusVario {
     // uart for the device
     AP_HAL::UARTDriver *uart;
     
-    uint8_t *_uart_buffer;
+    //uint8_t *_uart_buffer;
 
-    struct larus_variables {
+    struct PACKED larus_variables {
         float airspeed;
         //float airspeed_filtered;
         float airspeed_vector_x;
@@ -67,13 +70,18 @@ class LarusVario {
         int16_t velned_velocity_x;
         int16_t velned_velocity_y;
         int16_t velned_velocity_z;
-        
         int16_t smoothed_climb_rate;
         float height_baro;
+
+        int16_t acc_x;
+        int16_t acc_y;
+        int16_t acc_z;
+        int16_t battery_voltage;
         float dsp;
+        float pres_temp;
+        uint16_t gps_status;
         
         float dsp_bias;
-        int16_t acc_z;
     } _larus_variables;
 
     bool _uart_started = false;

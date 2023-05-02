@@ -14,7 +14,7 @@ LarusVario::LarusVario(const AP_FixedWing &parms) :
 {
     AP::ahrs().set_wind_estimation_enabled(true);
     uart = hal.serial(5);
-    _uart_buffer = new uint8_t[20];
+    //_uart_buffer = new uint8_t[20];
 }
 
 void LarusVario::start_uart(void){
@@ -63,8 +63,10 @@ void LarusVario::update()
     const AP_AHRS &_ahrs = AP::ahrs();
     get_height_baro();
     float aspd = 0;
+    float pres_temp = 0;
     if (aspeed && aspeed->enabled()) {
         aspd = aspeed->get_raw_airspeed();
+        aspeed->get_temperature(pres_temp);
     }
 
     // Save alpha 0 if we are in a level flight, not accelerating
@@ -143,6 +145,7 @@ void LarusVario::update()
     if(_ahrs.get_location(_loc) && AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D) {
             _loc = AP::gps().location();
     }
+    _larus_variables.gps_status = AP::gps().status();
     //uart->printf("test print larus %.4f %.4f %.4f\r\n", (double)roll, (double)_height_baro, (double)aspd);
     _larus_variables.airspeed = aspd;   // 4B
     //_larus_variables.airspeed_filtered = _aspd_filt;
@@ -176,120 +179,69 @@ void LarusVario::update()
     _larus_variables.velned_velocity_y = (int16_t)(velned.y * 500);   // 2B
     _larus_variables.velned_velocity_z = (int16_t)(velned.z * 500);   // 2B
 
+    _larus_variables.acc_x = (int16_t)(_ahrs.get_accel().x * 1000);   // 2B
+    _larus_variables.acc_y = (int16_t)(_ahrs.get_accel().y * 1000);   // 2B
     _larus_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 1000);   // 2B
-
+    _larus_variables.battery_voltage = (int16_t)(battery.voltage() * 100);   // 2B
+    _larus_variables.height_baro = _height_baro;
+    _larus_variables.pres_temp = pres_temp;
     
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
     //_larus_variables.height_baro = _height_baro;   // 4B
     //_larus_variables.dsp = dsp;   // 4B
 
     _larus_variables.dsp_bias = dsp_bias;
+    /*
     if (_ble_msg_count == 0) {
-        memcpy(_uart_buffer, &_larus_variables.airspeed, sizeof(_larus_variables.airspeed));
-        memcpy(_uart_buffer + 4, &_larus_variables.airspeed_vector_x, sizeof(_larus_variables.airspeed_vector_x));
-        memcpy(_uart_buffer + 8, &_larus_variables.airspeed_vector_y, sizeof(_larus_variables.airspeed_vector_y));
-        memcpy(_uart_buffer + 12, &_larus_variables.airspeed_vector_z, sizeof(_larus_variables.airspeed_vector_z));
-        memcpy(_uart_buffer + 16, &_larus_variables.roll, sizeof(_larus_variables.roll));
+        memcpy(_uart_buffer,        &_larus_variables.airspeed,         sizeof(_larus_variables.airspeed));
+        memcpy(_uart_buffer + 4,    &_larus_variables.airspeed_vector_x, sizeof(_larus_variables.airspeed_vector_x));
+        memcpy(_uart_buffer + 8,    &_larus_variables.airspeed_vector_y, sizeof(_larus_variables.airspeed_vector_y));
+        memcpy(_uart_buffer + 12,   &_larus_variables.airspeed_vector_z, sizeof(_larus_variables.airspeed_vector_z));
+        memcpy(_uart_buffer + 16,   &_larus_variables.roll,             sizeof(_larus_variables.roll));
     } else if (_ble_msg_count == 1)
     {
-        memcpy(_uart_buffer, &_larus_variables.wind_vector_x, sizeof(_larus_variables.wind_vector_x));
-        memcpy(_uart_buffer + 4, &_larus_variables.wind_vector_y, sizeof(_larus_variables.wind_vector_y));
-        memcpy(_uart_buffer + 8, &_larus_variables.wind_vector_z, sizeof(_larus_variables.wind_vector_z));
-        memcpy(_uart_buffer + 12, &_larus_variables.height_gps, sizeof(_larus_variables.height_gps));
-        memcpy(_uart_buffer + 16, &_larus_variables.pitch, sizeof(_larus_variables.pitch));
+        memcpy(_uart_buffer,        &_larus_variables.wind_vector_x, sizeof(_larus_variables.wind_vector_x));
+        memcpy(_uart_buffer + 4,    &_larus_variables.wind_vector_y, sizeof(_larus_variables.wind_vector_y));
+        memcpy(_uart_buffer + 8,    &_larus_variables.wind_vector_z, sizeof(_larus_variables.wind_vector_z));
+        memcpy(_uart_buffer + 12,   &_larus_variables.height_gps,   sizeof(_larus_variables.height_gps));
+        memcpy(_uart_buffer + 16,   &_larus_variables.pitch,        sizeof(_larus_variables.pitch));
     } else if (_ble_msg_count == 2)
     {
-        memcpy(_uart_buffer, &_larus_variables.ground_course, sizeof(_larus_variables.ground_course));
-        memcpy(_uart_buffer + 4, &_larus_variables.latitude, sizeof(_larus_variables.latitude));
-        memcpy(_uart_buffer + 8, &_larus_variables.longitude, sizeof(_larus_variables.longitude));
-        memcpy(_uart_buffer + 12, &_larus_variables.ground_speed, sizeof(_larus_variables.ground_speed));
-        memcpy(_uart_buffer + 16, &_larus_variables.yaw, sizeof(_larus_variables.yaw));
+        memcpy(_uart_buffer,        &_larus_variables.ground_course, sizeof(_larus_variables.ground_course));
+        memcpy(_uart_buffer + 4,    &_larus_variables.latitude,     sizeof(_larus_variables.latitude));
+        memcpy(_uart_buffer + 8,    &_larus_variables.longitude,    sizeof(_larus_variables.longitude));
+        memcpy(_uart_buffer + 12,   &_larus_variables.ground_speed, sizeof(_larus_variables.ground_speed));
+        memcpy(_uart_buffer + 16,   &_larus_variables.yaw,          sizeof(_larus_variables.yaw));
     } else if (_ble_msg_count == 3)
     {
-        memcpy(_uart_buffer, &_larus_variables.prev_raw_total_energy, sizeof(_larus_variables.prev_raw_total_energy));
-        memcpy(_uart_buffer + 4, &_larus_variables.prev_simple_total_energy, sizeof(_larus_variables.prev_simple_total_energy));
-        memcpy(_uart_buffer + 8, &_larus_variables.raw_climb_rate, sizeof(_larus_variables.raw_climb_rate));
-        memcpy(_uart_buffer + 12, &_larus_variables.simple_climb_rate, sizeof(_larus_variables.simple_climb_rate));
-        memcpy(_uart_buffer + 16, &_larus_variables.reading, sizeof(_larus_variables.reading));
+        memcpy(_uart_buffer,        &_larus_variables.prev_raw_total_energy,    sizeof(_larus_variables.prev_raw_total_energy));
+        memcpy(_uart_buffer + 4,    &_larus_variables.prev_simple_total_energy, sizeof(_larus_variables.prev_simple_total_energy));
+        memcpy(_uart_buffer + 8,    &_larus_variables.raw_climb_rate,           sizeof(_larus_variables.raw_climb_rate));
+        memcpy(_uart_buffer + 12,   &_larus_variables.simple_climb_rate,        sizeof(_larus_variables.simple_climb_rate));
+        memcpy(_uart_buffer + 16,   &_larus_variables.reading,                  sizeof(_larus_variables.reading));
     } else if (_ble_msg_count == 4)
     {
-        memcpy(_uart_buffer, &_larus_variables.gps_velocity_x, sizeof(_larus_variables.gps_velocity_x));
-        memcpy(_uart_buffer + 2, &_larus_variables.gps_velocity_y, sizeof(_larus_variables.gps_velocity_y));
-        memcpy(_uart_buffer + 4, &_larus_variables.gps_velocity_z, sizeof(_larus_variables.gps_velocity_z));
-        memcpy(_uart_buffer + 6, &_larus_variables.velned_velocity_x, sizeof(_larus_variables.velned_velocity_x));
-        memcpy(_uart_buffer + 8, &_larus_variables.velned_velocity_y, sizeof(_larus_variables.velned_velocity_y));
-        memcpy(_uart_buffer + 10, &_larus_variables.velned_velocity_z, sizeof(_larus_variables.velned_velocity_z));
-        memcpy(_uart_buffer + 12, &_larus_variables.smoothed_climb_rate, sizeof(_larus_variables.smoothed_climb_rate));
-        memcpy(_uart_buffer + 14, &_larus_variables.height_baro, sizeof(_larus_variables.height_baro));
-        //memcpy(&_uart_buffer + 16, &_larus_variables.acc_z, sizeof(_larus_variables.acc_z));
-        
+        memcpy(_uart_buffer,        &_larus_variables.gps_velocity_x,   sizeof(_larus_variables.gps_velocity_x));
+        memcpy(_uart_buffer + 2,    &_larus_variables.gps_velocity_y,   sizeof(_larus_variables.gps_velocity_y));
+        memcpy(_uart_buffer + 4,    &_larus_variables.gps_velocity_z,   sizeof(_larus_variables.gps_velocity_z));
+        memcpy(_uart_buffer + 6,    &_larus_variables.velned_velocity_x, sizeof(_larus_variables.velned_velocity_x));
+        memcpy(_uart_buffer + 8,    &_larus_variables.velned_velocity_y, sizeof(_larus_variables.velned_velocity_y));
+        memcpy(_uart_buffer + 10,   &_larus_variables.velned_velocity_z, sizeof(_larus_variables.velned_velocity_z));
+        memcpy(_uart_buffer + 12,   &_larus_variables.smoothed_climb_rate, sizeof(_larus_variables.smoothed_climb_rate));
+        memcpy(_uart_buffer + 14,   &_larus_variables.height_baro,      sizeof(_larus_variables.height_baro));
     }
+    */
     
-    _uart_buffer[18] = _ble_msg_count;
-    uart->write(_uart_buffer, 19);//sizeof(_larus_variables));
-    //uart->write((uint8_t)_ble_msg_count);
+    uart->write((uint8_t*)&_larus_variables + (_ble_msg_count * _ble_msg_length), _ble_msg_length);//sizeof(_larus_variables));
+    uart->write((uint8_t)_ble_msg_count);
     uart->flush();
     _ble_msg_count++;
-    _ble_msg_count %= 5;
+    _ble_msg_count %= (_num_messages - 1);    // last message is special debug
     
-    //uart->write(0x0d);
-    //uart->flush();
-    
-    //for(int i = 0; i < (sizeof(_larus_variables) + (sizeof(_larus_variables) % _ble_msg_length)) / _ble_msg_length; i++){
-    //    uart->write((uint8_t*)&_larus_variables + _ble_msg_length * i, sizeof(_larus_variables) - i * _ble_msg_length > _ble_msg_length ? _ble_msg_length : sizeof(_larus_variables) % _ble_msg_length);//sizeof(_larus_variables));
-    //    uart->flush();
-    //}
-        // Log at 1/10Hz
-    if((float)(AP_HAL::micros64() - _prev_log_time)/1e6 > 10){
+    // Log at 1/10Hz
+    if((float)(AP_HAL::micros64() - _prev_log_time)/1e6 > 10 && _ble_msg_count == 1){
         _prev_log_time = AP_HAL::micros64();
-    
-
-// @LoggerMessage: VAR
-// @Vehicles: Plane
-// @Description: Variometer data
-// @Field: TimeUS: Time since system startup
-// @Field: aspd_raw
-// @Field: aspd_filt: filtered
-// @Field: roll: AHRS roll
-// @Field: raw: estimated air vertical speed
-// @Field: cl: raw climb rate
-// @Field: fc: filtered climb rate
-// @Field: dsp: average acceleration along X axis
-// @Field: dspb: detected bias in average acceleration along X axis
-// @Field: windX: wind along X axis
-// @Field: windY: wind along Y axis
-// @Field: windZ: wind along Z axis
-// @Field: height_baro: height
-/*
-    AP::logger().WriteStreaming("VAR", "TUS,aspr,aspf,rl,rw,cl,fc,dsp,dspb,windx,wy,wz,alt", "Qffffffffffff",
-                       AP_HAL::micros64(),
-                       (double)aspd,
-                       (double)_aspd_filt,
-                       (double)roll,
-                       (double)reading,
-                       (double)_raw_climb_rate,
-                       (double)smoothed_climb_rate,
-                       (double)dsp,
-                       (double)dsp_bias,
-                       (double)wind.x,
-                       (double)wind.y,
-                       (double)wind.z,
-                       (double)_height_baro);*/
-    /*printf("aspd: %f, aspd_filt: %f, roll: %f, reading: %f, raw_climb_rate: %f, smoothed_climb_rate: %f, dsp: %f, dsp_bias: %f, wind.x: %f, wind.y: %f, wind.z: %f, height_baro: %f, simple: %f\r\n",
-                       (double)aspd,
-                       (double)_aspd_filt,
-                       (double)roll,
-                       (double)reading,
-                       (double)_raw_climb_rate,
-                       (double)smoothed_climb_rate,
-                       (double)dsp,
-                       (double)dsp_bias,
-                       (double)wind.x,
-                       (double)wind.y,
-                       (double)wind.z,
-                       (double)_height_baro,
-                       (double)_simple_climb_rate);
-                       */
+        _ble_msg_count = _num_messages - 1; // send debug message next
     }
 
     //uart8->printf("test print larus p8 %f\r\n", (double)roll);

@@ -40,7 +40,6 @@ class LarusVario {
 
     struct PACKED larus_variables {
         float airspeed;
-        //float airspeed_filtered;
         float airspeed_vector_x;
         float airspeed_vector_y;
         float airspeed_vector_z;
@@ -58,8 +57,9 @@ class LarusVario {
         float ground_speed;
         int16_t yaw;
 
-        float prev_raw_total_energy;
-        float prev_simple_total_energy;
+        float turn_radius;
+        int16_t ekf_ground_speed_x;
+        int16_t ekf_ground_speed_y;
         float raw_climb_rate;
         float simple_climb_rate;
         int16_t reading;
@@ -77,7 +77,7 @@ class LarusVario {
         int16_t acc_y;
         int16_t acc_z;
         int16_t battery_voltage;
-        float dsp;
+        uint32_t gps_time;
         float pres_temp;
         uint16_t gps_status;
         
@@ -109,8 +109,6 @@ class LarusVario {
 
     int32_t _alt;
 
-    float _eheight;
-
     Location _loc;
     
     Vector3f _prev_velned;
@@ -121,9 +119,7 @@ class LarusVario {
     Vector3f _aspd_vec;
 
     // declares a 5point average filter using floats
-    AverageFilterFloat_Size5 _vdot_filter;
-
-    AverageFilterFloat_Size5 _sp_filter;
+    //AverageFilterFloat_Size5 _vdot_filter;
 
     /*
      low pass filters for various purposes.
@@ -133,9 +129,6 @@ class LarusVario {
 
     // Longitudinal acceleration bias filter.
     LowPassFilter<float> _vdotbias_filter{1/60.0};
-
-    // Speed to fly vario filter.
-    LowPassFilter<float> _stf_filter{1/20.0};
 
 public:
     struct PolarParams {
@@ -164,14 +157,14 @@ public:
 
     float get_aircraft_sink(void);
 
-    // energy_height = Square(true_airspeed) * INVERSE_2G
-    float get_energy_height(void);
+    // energy_height = Square(true_airspeed) * INVERSE_2G. Returns energy height in m
+    float get_energy_height(float airspeed);
 
-    // write baro height, true if success
-    void get_height_baro(void);
+    // Returns altitude in m
+    float get_altitude(void);
 
-    // TE_altitude = nav_altitude + energy_height;
-    float get_te_altitude(void);
+    // TE_altitude = nav_altitude + energy_height. Returns altitude in m
+    float get_te_altitude(float airspeed);
 
     // Larus Part: Speed change - wind change
     float get_wind_compensation(Vector3f velned, Vector3f wind);

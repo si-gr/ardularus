@@ -32,21 +32,21 @@ void LarusVario::send_uart(uint8_t *buffer, uint8_t buffer_len){
     uart->flush();
 }
 
-void LarusVario::get_height_baro(void){
+float LarusVario::get_altitude(void){
     if (AP::ahrs().get_location(_loc)){
         if(_loc.get_alt_cm(Location::AltFrame::ABSOLUTE, _alt)){
-            _height_baro = (double)_alt / 10.0f;
+            return (double)_alt / 100.0f;
         }
     }
+    return 0;
 }
 
-float LarusVario::get_energy_height(void){
-    _eheight = (powf(_aspd_filt, 2) / GRAVITY_MSS) / 2;
-    return _eheight;
+float LarusVario::get_energy_height(float airspeed){
+    return powf(airspeed, 2) / (2.f * GRAVITY_MSS);
 }
 
-float LarusVario::get_te_altitude(void){
-    return _eheight + _height_baro;
+float LarusVario::get_te_altitude(float airspeed){
+    return get_energy_height(airspeed) + get_altitude();
 }
 
 float LarusVario::get_wind_compensation(Vector3f velned, Vector3f wind){
@@ -60,12 +60,11 @@ void LarusVario::update()
         _uart_started = true;
     }
 
-    const AP_AHRS &_ahrs = AP::ahrs();
-    get_height_baro();
+    AP_AHRS &_ahrs = AP::ahrs();
     float aspd = 0;
     float pres_temp = 0;
     if (aspeed && aspeed->enabled()) {
-        aspd = aspeed->get_raw_airspeed();
+        aspd = aspeed->get_airspeed();
         aspeed->get_temperature(pres_temp);
     }
 
@@ -75,45 +74,24 @@ void LarusVario::update()
             _alpha_0[MIN(((uint8_t)aspd) - _alpha_0_min_aspd, 0)] = _alpha_0[MIN(((uint8_t)aspd) - _alpha_0_min_aspd, 0)] * 0.9 + _ahrs.get_pitch() * 0.1;
         }
     }
-    
-    _aspd_filt = _sp_filter.apply(aspd);
 
-    get_energy_height();
-
-    _c_l = _ahrs.get_accel().z / powf(_aspd_filt, 2);
-    
+    _c_l = _ahrs.get_accel().z / powf(aspd, 2);    
     _alpha = _c_l + _alpha_0[MIN(((uint8_t)_aspd_filt) - _alpha_0_min_aspd, 0)];
+
     float dt = (float)(AP_HAL::micros64() - _prev_update_time)/1e6;
 
 
     // Logic borrowed from AP_TECS.cpp
     // Update and average speed rate of change
     // Get DCM
-    const Matrix3f &rotMat = _ahrs.get_rotation_body_to_ned();
+    //const Matrix3f &rotMat = _ahrs.get_rotation_body_to_ned();
     // Calculate speed rate of change
-    float temp = rotMat.c.x * GRAVITY_MSS + AP::ins().get_accel().x;
-    // take 5 point moving average
-    float dsp = _vdot_filter.apply(temp);
-
-    // Now we need to high-pass this signal to remove bias.
-    _vdotbias_filter.set_cutoff_frequency(30.0f);
-    float dsp_bias = _vdotbias_filter.apply(temp, dt);
-    
-    float dsp_cor = dsp - dsp_bias;
-
+    //float temp = rotMat.c.x * GRAVITY_MSS + AP::ins().get_accel().x;
 
     Vector3f velned;
     Vector3f wind;
+    Vector2f groundspeed_vector = _ahrs.groundspeed_vector();
 
-    if(_prev_simple_tot_e < 5.0f){
-        _prev_simple_tot_e = _alt;
-    }
-    if(_prev_raw_total_energy < 5.0f){
-        _prev_raw_total_energy = _alt;
-    }
-
-
-    float raw_climb_rate = 0.0f;
     if (_ahrs.get_velocity_NED(velned)) {
 
         wind = _ahrs.wind_estimate();
@@ -121,23 +99,13 @@ void LarusVario::update()
         float current_raw_tot_e = get_wind_compensation(_aspd_vec, wind) + velned.z + (double)_alt;
         _raw_climb_rate = (current_raw_tot_e - _prev_raw_total_energy) / dt;
         _prev_raw_total_energy = current_raw_tot_e;
-        float current_simple_tot_e = ((velned) * (velned) * 0.5f) + (double)_alt * 0.05f;      // v^2 + h  simplified from 1 / 2 m v^2 + mgh
-        current_simple_tot_e = current_simple_tot_e * 0.3f;
-        _simple_climb_rate = (current_simple_tot_e - _prev_simple_tot_e) / dt;
-        _prev_simple_tot_e = current_simple_tot_e;
     }
-    
-    _climb_filter.set_cutoff_frequency(5.0f);
-    //float smoothed_climb_rate = _climb_filter.apply(raw_climb_rate, dt);
-    //send_uart((uint8_t*)&smoothed_climb_rate, sizeof(smoothed_climb_rate));
-    // Compute still-air sinkrate -- unused for now, only netto vario
-    //float roll = _ahrs.roll;
-    //float sinkrate = calculate_aircraft_sinkrate(roll);
 
-    reading = raw_climb_rate + dsp_cor*_aspd_filt/GRAVITY_MSS;
+    float te_altitude = get_te_altitude(aspd);
+    _simple_climb_rate = (te_altitude - _prev_simple_tot_e) / dt;
+    _prev_simple_tot_e = te_altitude;
     
-    // Update filters.
-
+    
     _prev_update_time = AP_HAL::micros64();
 
     
@@ -166,8 +134,9 @@ void LarusVario::update()
     _larus_variables.ground_course = AP::gps().ground_course();   // 4B
     _larus_variables.yaw = (int16_t)((_ahrs.yaw / M_PI) * (float)(0x8000));    // 2B 
 
-    _larus_variables.prev_raw_total_energy = _prev_raw_total_energy;   // 4B
-    _larus_variables.prev_simple_total_energy = _prev_simple_tot_e;   // 4B
+    _larus_variables.turn_radius = (aspd*aspd) / (GRAVITY_MSS * tanf(_ahrs.roll));   // 4B
+    _larus_variables.ekf_ground_speed_x = (int16_t)(groundspeed_vector.x * 500);   // 2B
+    _larus_variables.ekf_ground_speed_y = (int16_t)(groundspeed_vector.y * 500);   // 2B
     _larus_variables.raw_climb_rate = _raw_climb_rate;   // 4B
     _larus_variables.simple_climb_rate = _simple_climb_rate;   // 4B
     _larus_variables.reading = (int16_t)(reading * 100.0);   // 2B
@@ -183,14 +152,13 @@ void LarusVario::update()
     _larus_variables.acc_y = (int16_t)(_ahrs.get_accel().y * 1000);   // 2B
     _larus_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 1000);   // 2B
     _larus_variables.battery_voltage = (int16_t)(battery.voltage() * 100);   // 2B
-    _larus_variables.height_baro = _height_baro;
+    _larus_variables.height_baro = get_altitude();
     _larus_variables.pres_temp = pres_temp;
+    _larus_variables.gps_time = AP::gps().time_week_ms();
     
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
     //_larus_variables.height_baro = _height_baro;   // 4B
     //_larus_variables.dsp = dsp;   // 4B
-
-    _larus_variables.dsp_bias = dsp_bias;
     /*
     if (_ble_msg_count == 0) {
         memcpy(_uart_buffer,        &_larus_variables.airspeed,         sizeof(_larus_variables.airspeed));

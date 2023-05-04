@@ -309,7 +309,9 @@ private:
         CFG_SIGNAL_GLO_L2_ENA           = 0x1031001a,
         CFG_SIGNAL_NAVIC_ENA            = 0x10310026,
         CFG_SIGNAL_NAVIC_L5_ENA         = 0x1031001d,
-
+        
+        CFG_RATE_NAV                    = 0x30210002,
+        CFG_RATE_TIMEREF                = 0x20210003,
         // other keys
         CFG_NAVSPG_DYNMODEL             = 0x20110021,
 

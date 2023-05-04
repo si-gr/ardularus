@@ -237,7 +237,10 @@ const AP_GPS_UBLOX::config_list AP_GPS_UBLOX::config_M10[] {
  { ConfigKey::CFG_SIGNAL_QZSS_ENA, 1},
  { ConfigKey::CFG_SIGNAL_QZSS_L1CA_ENA, 1},
  { ConfigKey::CFG_SIGNAL_QZSS_L1S_ENA, 1},
- { ConfigKey::CFG_NAVSPG_DYNMODEL, 8}, // Air < 4g
+ { ConfigKey::CFG_NAVSPG_DYNMODEL, 0}, // Default 0
+ { ConfigKey::CFG_RATE_MEAS, (uint32_t)100},
+ { ConfigKey::CFG_RATE_NAV, 1},
+ { ConfigKey::CFG_RATE_TIMEREF, 0},
 };
 
 

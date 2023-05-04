@@ -90,7 +90,11 @@ private:
     AP_HAL::UARTDriver *uart;
     uint32_t _measurement_started_ms;
     float pressure;
+    float pressure_sum;
+    uint8_t press_count = 0;
     float temperature;
+    float temperature_sum;
+    uint8_t temp_count = 0;
     
     uint32_t last_sample_time_ms;
 

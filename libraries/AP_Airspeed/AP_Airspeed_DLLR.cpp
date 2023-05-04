@@ -96,7 +96,7 @@ void AP_Airspeed_DLLR::setup()
     dev->set_device_type(uint8_t(DevType::DLLR));
     set_bus_id(dev->get_bus_id());
     
-    dev->register_periodic_callback(1000000UL/30U,
+    dev->register_periodic_callback(1000000UL/60U,
                                     FUNCTOR_BIND_MEMBER(&AP_Airspeed_DLLR::timer, void));
 
 
@@ -129,7 +129,7 @@ void AP_Airspeed_DLLR::_measure()
     #ifdef DLLR_DEBUG_UART
     uart->printf("start measure\r\n");
     #endif
-    uint8_t cmd = 0xAD; // get average4 values
+    uint8_t cmd = 0xAD; // get average4 values, takes max 11.7 / 13.5 / 15.7 ms for 16 / 17 / 18 bits
     if (dev->transfer(&cmd, 1, nullptr, 0)) {
         _measurement_started_ms = AP_HAL::millis();
     }
@@ -148,7 +148,7 @@ void AP_Airspeed_DLLR::_measure()
 #define MAX_32B_VAL 0x7FFFFFFF
 
 
-// 30Hz timer
+// 60Hz timer
 void AP_Airspeed_DLLR::timer()
 {
 
@@ -171,7 +171,7 @@ void AP_Airspeed_DLLR::timer()
         #ifdef DLLR_DEBUG_UART
         uart->printf("read fail\r\n");
         #endif
-        if(AP_HAL::millis() - _measurement_started_ms > 30){
+        if(AP_HAL::millis() - _measurement_started_ms > 15){
             _measure();
         }
         return;
@@ -209,9 +209,19 @@ void AP_Airspeed_DLLR::timer()
     float tcorr = (1.0f - (DLLR_E * 2.5f * pcorr)) * temperature_data * temp_correction / TCKScale; // value between 0 and 1
     pcorr = pcorr - tcorr;
     pcomp = abs((int32_t) ((pcorr - 1.0f) * 2 * (float)MAX_24B_VAL) + 0x800000);   // 0.3995 * (2^24 - 1) = 6 702 497.3925
-    pressure =                  1.25f * (((float)(pcomp) - 0.1f * f2p24)/ f2p24) * 2488.4f;
+    float temp = ((float)(temperature_data + Tref_Counts) * 125.f)/f2p24 - 40.f;
+    WITH_SEMAPHORE(sem);
+    const uint32_t now = AP_HAL::millis();
+    if ((temperature != 0) && (fabsf(temperature - temp) > 10) && ((now - last_sample_time_ms) < 2000)) {
+        Debug("DLLR: Temperature swing %f", temp);
+        return;
+    }
+    
+    pressure_sum +=                  1.25f * (((float)(pcomp) - 0.1f * f2p24)/ f2p24) * 2488.4f;
+    press_count++;
     //float pressure_no_comp =    1.25f * (((float)(iPcorr) - 0.1f * f2p24)/ f2p24) * 2488.4f;
-    temperature = ((float)(temperature_data + Tref_Counts) * 125.f)/f2p24 - 40.f;
+    temperature_sum += temp;
+    temp_count++;
     #ifdef DLLR_DEBUG_UART
     uart->printf("t %.2f p %.4f\r\n", temperature, pressure);
     uart->printf("a %.4f b %.4f c %.4f d %.4f tcor %.4f\r\n", DLLR_ABCD[0], DLLR_ABCD[1], DLLR_ABCD[2], DLLR_ABCD[3], tcorr);
@@ -219,12 +229,9 @@ void AP_Airspeed_DLLR::timer()
     #endif
     
 
-    WITH_SEMAPHORE(sem);
 
-    last_sample_time_ms = AP_HAL::millis();
-    if(AP_HAL::millis() - _measurement_started_ms > 30){
-        _measure();
-    }
+    last_sample_time_ms = now;
+    _measure();
 }
 
 // return the current differential_pressure in Pascal
@@ -232,8 +239,13 @@ bool AP_Airspeed_DLLR::get_differential_pressure(float &_pressure)
 {
     WITH_SEMAPHORE(sem);
 
-    if ((AP_HAL::millis() - last_sample_time_ms) > 100) {
+    if ((AP_HAL::millis() - last_sample_time_ms) > 150) {
         return false;
+    }
+    if (press_count > 0) {
+        pressure = pressure_sum / press_count;
+        press_count = 0;
+        pressure_sum = 0;
     }
 
     _pressure = pressure;
@@ -245,8 +257,14 @@ bool AP_Airspeed_DLLR::get_temperature(float &_temperature)
 {
     WITH_SEMAPHORE(sem);
 
-    if ((AP_HAL::millis() - last_sample_time_ms) > 100) {
+    if ((AP_HAL::millis() - last_sample_time_ms) > 150) {
         return false;
+    }
+
+    if (temp_count > 0) {
+        temperature = temperature_sum / temp_count;
+        temp_count = 0;
+        temperature_sum = 0;
     }
 
     _temperature = temperature;

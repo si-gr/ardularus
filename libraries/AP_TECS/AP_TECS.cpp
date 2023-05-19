@@ -1353,5 +1353,9 @@ void AP_TECS::update_pitch_throttle(int32_t hgt_dem_cm,
                                     (double)_PITCHmaxf,
                                     (double)_TAS_rate_dem,
                                     _flags_byte);
-    }
+    } 
+}
+   
+float AP_TECS::getEnergyChange() {
+    return _SPEdot + _SKEdot;
 }

@@ -8,15 +8,6 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 
 
 
-LarusVario::LarusVario(const AP_FixedWing &parms) :
-//LarusVario::LarusVario(const AP_FixedWing &parms, const PolarParams &polarParams) :
-    _aparm(parms)
-{
-    AP::ahrs().set_wind_estimation_enabled(true);
-    uart = hal.serial(5);
-    //_uart_buffer = new uint8_t[20];
-}
-
 void LarusVario::start_uart(void){
     //uart->configure_parity(0);
     //uart->set_stop_bits(1);
@@ -59,8 +50,6 @@ void LarusVario::update()
         start_uart();
         _uart_started = true;
     }
-
-    AP_AHRS &_ahrs = AP::ahrs();
     float aspd = 0;
     float pres_temp = 0;
     if (aspeed && aspeed->enabled()) {
@@ -151,9 +140,9 @@ void LarusVario::update()
     _larus_variables.acc_x = (int16_t)(_ahrs.get_accel().x * 1000);   // 2B
     _larus_variables.acc_y = (int16_t)(_ahrs.get_accel().y * 1000);   // 2B
     _larus_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 1000);   // 2B
-    _larus_variables.battery_voltage = (int16_t)(battery.voltage() * 100);   // 2B
+    _larus_variables.battery_voltage = roundf(AP::battery().voltage() * 100.0f);   // 2B
     _larus_variables.height_baro = get_altitude();
-    _larus_variables.pres_temp = pres_temp;
+    _larus_variables.tecs_total_energy = _tecs->getEnergyChange(); // change for tecs totE
     _larus_variables.gps_time = AP::gps().time_week_ms();
     
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
@@ -204,13 +193,13 @@ void LarusVario::update()
     uart->write((uint8_t)_ble_msg_count);
     uart->flush();
     _ble_msg_count++;
-    _ble_msg_count %= (_num_messages - 1);    // last message is special debug
+    _ble_msg_count %= _num_messages;    // last message is special debug
     
     // Log at 1/10Hz
-    if((float)(AP_HAL::micros64() - _prev_log_time)/1e6 > 10 && _ble_msg_count == 1){
-        _prev_log_time = AP_HAL::micros64();
-        _ble_msg_count = _num_messages - 1; // send debug message next
-    }
+    //if((float)(AP_HAL::micros64() - _prev_log_time)/1e9 > 10 && _ble_msg_count == 1){
+    //    _prev_log_time = AP_HAL::micros64();
+    //    _ble_msg_count = _num_messages - 1; // send debug message next
+    //}
 
     //uart8->printf("test print larus p8 %f\r\n", (double)roll);
 }

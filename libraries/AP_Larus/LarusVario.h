@@ -11,6 +11,7 @@ Manages the estimation of aircraft total energy, drag and vertical air velocity.
 #include <AP_Vehicle/AP_FixedWing.h>
 #include <AP_HAL/AP_HAL.h>
 #include <AP_BattMonitor/AP_BattMonitor.h>
+#include <AP_TECS/AP_TECS.h>
 
 #include <AP_GPS/AP_GPS.h>
 #include <stdio.h>
@@ -20,7 +21,6 @@ class LarusVario {
 
 
     const AP_HAL::HAL& hal = AP_HAL::get_HAL();
-    const AP_FixedWing &_aparm;
     const uint8_t _ble_msg_length = 18;
     AP_Airspeed *aspeed = AP::airspeed();
     const AP_BattMonitor &battery = AP::battery();
@@ -78,7 +78,7 @@ class LarusVario {
         int16_t acc_z;
         int16_t battery_voltage;
         uint32_t gps_time;
-        float pres_temp;
+        float tecs_total_energy;
         uint16_t gps_status;
         
         float dsp_bias;
@@ -139,10 +139,23 @@ public:
 
     PolarParams _polarParams = {25.6, 0.027, 0.031};
 
-    LarusVario(const AP_FixedWing &parms);
     //LarusVario(const AP_FixedWing &parms, const PolarParams &polarParams);
-    
-    
+    //LarusVario(AP_AHRS &ahrs, const AP_TECS *tecs);
+    LarusVario(AP_AHRS &ahrs, AP_TECS *tecs)
+        : _ahrs(ahrs)
+        , _tecs(tecs)
+    {
+
+    _ahrs.set_wind_estimation_enabled(true);
+    uart = hal.serial(5);
+    //_uart_buffer = new uint8_t[20];
+    }
+
+    // reference to the AHRS object
+    AP_AHRS &_ahrs;
+
+    // pointer to the SpdHgtControl object
+    AP_TECS *_tecs;
     float alt;
     float reading;
 

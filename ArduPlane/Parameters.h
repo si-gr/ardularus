@@ -505,8 +505,6 @@ public:
     SoaringController soaring_controller;
 #endif
 
-    LarusVario larus_controller;
-
     // dual motor tailsitter rudder to differential thrust scaling: 0-100%
     AP_Int8 rudd_dt_gain;
 

@@ -146,6 +146,8 @@ public:
     // this supports the TECS_* user settable parameters
     static const struct AP_Param::GroupInfo var_info[];
 
+    float getEnergyChange();
+
 private:
     // Last time update_50Hz was called
     uint64_t _update_50hz_last_usec;

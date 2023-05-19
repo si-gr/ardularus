@@ -1253,7 +1253,6 @@ ParametersG2::ParametersG2(void) :
 #if HAL_SOARING_ENABLED
     ,soaring_controller(plane.TECS_controller, plane.aparm)
 #endif
-,larus_controller(plane.aparm)
 #if HAL_BUTTON_ENABLED
     ,button_ptr(&plane.button)
 #endif

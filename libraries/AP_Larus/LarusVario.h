@@ -70,7 +70,7 @@ class LarusVario {
         int16_t velned_velocity_x;
         int16_t velned_velocity_y;
         int16_t velned_velocity_z;
-        int16_t smoothed_climb_rate;
+        int16_t tasstate;
         float height_baro;
 
         int16_t acc_x;

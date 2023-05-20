@@ -149,6 +149,7 @@ public:
     float getEnergyChange();
     float getSPEdot();
     float getSKEdot();
+    float getTASState();
 
 private:
     // Last time update_50Hz was called

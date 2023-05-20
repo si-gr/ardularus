@@ -1366,3 +1366,7 @@ float AP_TECS::getSPEdot() {
 float AP_TECS::getSKEdot() {
     return _SKEdot;
 }
+
+float AP_TECS::getTASState() {
+    return _TAS_state;
+}

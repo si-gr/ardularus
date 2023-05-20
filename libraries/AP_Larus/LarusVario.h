@@ -61,8 +61,8 @@ class LarusVario {
         int16_t ekf_ground_speed_x;
         int16_t ekf_ground_speed_y;
         float raw_climb_rate;
-        float simple_climb_rate;
         int16_t reading;
+        float thermability;
 
         int16_t gps_velocity_x;
         int16_t gps_velocity_y;
@@ -78,21 +78,21 @@ class LarusVario {
         int16_t acc_z;
         int16_t battery_voltage;
         uint32_t gps_time;
-        float tecs_total_energy;
+        int16_t spedot;
+        int16_t skedot;
         uint16_t gps_status;
         
-        float dsp_bias;
     } _larus_variables;
 
     bool _uart_started = false;
 
     float _raw_climb_rate;
     
-    float _simple_climb_rate;
+    //float _simple_climb_rate;
 
-    float _aspd_filt;
+    //float _aspd_filt;
 
-    float _expected_thermalling_sink;
+    //float _expected_thermalling_sink;
 
     float _height_baro;
 
@@ -100,12 +100,12 @@ class LarusVario {
 
     float _prev_raw_total_energy;   // Wind compensated total energy with z axis projection
 
-    float _c_l;
+    //float _c_l;
 
-    float _alpha;
+    //float _alpha;
 
-    const uint8_t _alpha_0_min_aspd = 16; // minimum airspeed for alpha 0 array
-    float _alpha_0 [16];    // array to store alpha 0 values for different airspeeds: 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46 m/s
+    //const uint8_t _alpha_0_min_aspd = 16; // minimum airspeed for alpha 0 array
+    //float _alpha_0 [16];    // array to store alpha 0 values for different airspeeds: 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46 m/s
 
     int32_t _alt;
 
@@ -131,13 +131,13 @@ class LarusVario {
     LowPassFilter<float> _vdotbias_filter{1/60.0};
 
 public:
-    struct PolarParams {
+    /*struct PolarParams {
         float K;
         float CD0;
         float B;
-    };
+    };*/
 
-    PolarParams _polarParams = {25.6, 0.027, 0.031};
+    //PolarParams _polarParams = {25.6, 0.027, 0.031};
 
     //LarusVario(const AP_FixedWing &parms, const PolarParams &polarParams);
     //LarusVario(AP_AHRS &ahrs, const AP_TECS *tecs);
@@ -159,7 +159,7 @@ public:
     float alt;
     float reading;
 
-    void update();
+    void update(float thermalability, float varioReading, float thermallingRadius);
     float calculate_aircraft_sinkrate(float phi) const;
 
     void start_uart(void);

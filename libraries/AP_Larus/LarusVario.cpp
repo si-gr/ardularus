@@ -44,7 +44,7 @@ float LarusVario::get_wind_compensation(Vector3f velned, Vector3f wind){
     return powf(velned.x - wind.x, 2) + powf(velned.y - wind.y, 2);
 }
 
-void LarusVario::update()
+void LarusVario::update(float thermalability, float varioReading, float thermallingRadius)
 {   
     if(!_uart_started){
         start_uart();
@@ -58,7 +58,7 @@ void LarusVario::update()
     }
 
     // Save alpha 0 if we are in a level flight, not accelerating
-    if (aspd > _alpha_0_min_aspd){
+    /*if (aspd > _alpha_0_min_aspd){
         if (abs(_ahrs.get_accel().z - 1.0) < 0.1 ) {
             _alpha_0[MIN(((uint8_t)aspd) - _alpha_0_min_aspd, 0)] = _alpha_0[MIN(((uint8_t)aspd) - _alpha_0_min_aspd, 0)] * 0.9 + _ahrs.get_pitch() * 0.1;
         }
@@ -66,7 +66,7 @@ void LarusVario::update()
 
     _c_l = _ahrs.get_accel().z / powf(aspd, 2);    
     _alpha = _c_l + _alpha_0[MIN(((uint8_t)_aspd_filt) - _alpha_0_min_aspd, 0)];
-
+*/
     float dt = (float)(AP_HAL::micros64() - _prev_update_time)/1e6;
 
 
@@ -90,9 +90,9 @@ void LarusVario::update()
         _prev_raw_total_energy = current_raw_tot_e;
     }
 
-    float te_altitude = get_te_altitude(aspd);
-    _simple_climb_rate = (te_altitude - _prev_simple_tot_e) / dt;
-    _prev_simple_tot_e = te_altitude;
+    //float te_altitude = get_te_altitude(aspd);
+    //_simple_climb_rate = (te_altitude - _prev_simple_tot_e) / dt;
+    //_prev_simple_tot_e = te_altitude;
     
     
     _prev_update_time = AP_HAL::micros64();
@@ -123,12 +123,12 @@ void LarusVario::update()
     _larus_variables.ground_course = AP::gps().ground_course();   // 4B
     _larus_variables.yaw = (int16_t)((_ahrs.yaw / M_PI) * (float)(0x8000));    // 2B 
 
-    _larus_variables.turn_radius = (aspd*aspd) / (GRAVITY_MSS * tanf(_ahrs.roll));   // 4B
+    _larus_variables.turn_radius = thermallingRadius;//(aspd*aspd) / (GRAVITY_MSS * tanf(_ahrs.roll));   // 4B
     _larus_variables.ekf_ground_speed_x = (int16_t)(groundspeed_vector.x * 500);   // 2B
     _larus_variables.ekf_ground_speed_y = (int16_t)(groundspeed_vector.y * 500);   // 2B
     _larus_variables.raw_climb_rate = _raw_climb_rate;   // 4B
-    _larus_variables.simple_climb_rate = _simple_climb_rate;   // 4B
-    _larus_variables.reading = (int16_t)(reading * 100.0);   // 2B
+    _larus_variables.reading = (int16_t)(varioReading * 1000.0);   // 2B
+    _larus_variables.thermability = thermalability;   // 4B
 
     _larus_variables.gps_velocity_x = (int16_t)(AP::gps().velocity().x * 500);   // 2B
     _larus_variables.gps_velocity_y = (int16_t)(AP::gps().velocity().y * 500);   // 2B
@@ -136,13 +136,14 @@ void LarusVario::update()
     _larus_variables.velned_velocity_x = (int16_t)(velned.x * 500);   // 2B
     _larus_variables.velned_velocity_y = (int16_t)(velned.y * 500);   // 2B
     _larus_variables.velned_velocity_z = (int16_t)(velned.z * 500);   // 2B
+    _larus_variables.height_baro = get_altitude();
 
     _larus_variables.acc_x = (int16_t)(_ahrs.get_accel().x * 1000);   // 2B
     _larus_variables.acc_y = (int16_t)(_ahrs.get_accel().y * 1000);   // 2B
     _larus_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 1000);   // 2B
     _larus_variables.battery_voltage = roundf(AP::battery().voltage() * 100.0f);   // 2B
-    _larus_variables.height_baro = get_altitude();
-    _larus_variables.tecs_total_energy = _tecs->getEnergyChange(); // change for tecs totE
+    _larus_variables.spedot = (int16_t)(_tecs->getSPEdot() * 1000); // change for tecs totE
+    _larus_variables.skedot = (int16_t)(_tecs->getSKEdot() * 1000); // change for tecs totE
     _larus_variables.gps_time = AP::gps().time_week_ms();
     
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
@@ -204,7 +205,7 @@ void LarusVario::update()
     //uart8->printf("test print larus p8 %f\r\n", (double)roll);
 }
 
-
+/*
 float LarusVario::calculate_aircraft_sinkrate(float phi) const
 {
     // Remove aircraft sink rate
@@ -219,4 +220,4 @@ float LarusVario::calculate_aircraft_sinkrate(float phi) const
     float cosphi = (1 - phi * phi / 2); // first two terms of mclaurin series for cos(phi)
     
     return _aspd_filt * (C1 + C2 / (cosphi * cosphi));
-}
+}*/

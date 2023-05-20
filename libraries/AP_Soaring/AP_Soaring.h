@@ -124,6 +124,11 @@ public:
         return _vario.get_displayed_value();
     }
 
+    float get_thermability()
+    {
+        return _thermalability;
+    }
+
     void update_vario();
 
     bool check_drift(Vector2f prev_wp, Vector2f next_wp);

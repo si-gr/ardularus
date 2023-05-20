@@ -1359,3 +1359,10 @@ void AP_TECS::update_pitch_throttle(int32_t hgt_dem_cm,
 float AP_TECS::getEnergyChange() {
     return _SPEdot + _SKEdot;
 }
+   
+float AP_TECS::getSPEdot() {
+    return _SPEdot;
+}   
+float AP_TECS::getSKEdot() {
+    return _SKEdot;
+}

@@ -147,6 +147,8 @@ public:
     static const struct AP_Param::GroupInfo var_info[];
 
     float getEnergyChange();
+    float getSPEdot();
+    float getSKEdot();
 
 private:
     // Last time update_50Hz was called

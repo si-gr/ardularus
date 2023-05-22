@@ -412,11 +412,7 @@ float SoaringController::McCready(float alt)
 
 SoaringController::ActiveStatus SoaringController::active_state(bool override_disable) const
 {
-    if (override_disable || !soar_active) {
-        return ActiveStatus::SOARING_DISABLED;
-    }
-
-    return _pilot_desired_state;
+    return ActiveStatus::AUTO_MODE_CHANGE;
 }
 
 void SoaringController::update_active_state(bool override_disable)

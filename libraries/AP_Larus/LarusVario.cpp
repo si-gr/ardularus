@@ -138,13 +138,13 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     _larus_variables.tasstate = (int16_t)(_tecs->getTASState() * 100.0);   // 2B
     _larus_variables.height_baro = get_altitude();
 
-    _larus_variables.acc_x = (int16_t)(_ahrs.get_accel().x * 1000);   // 2B
-    _larus_variables.acc_y = (int16_t)(_ahrs.get_accel().y * 1000);   // 2B
-    _larus_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 1000);   // 2B
+    _larus_variables.acc_x = (int16_t)(_ahrs.get_accel().x * 50);   // 2B
+    _larus_variables.acc_y = (int16_t)(_ahrs.get_accel().y * 50);   // 2B
+    _larus_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 50);   // 2B
     _larus_variables.battery_voltage = roundf(AP::battery().voltage() * 100.0f);   // 2B
     _larus_variables.gps_time = AP::gps().time_week_ms();
-    _larus_variables.spedot = (int16_t)(_tecs->getSPEdot() * 1000);
-    _larus_variables.skedot = (int16_t)(_tecs->getSKEdot() * 1000);
+    _larus_variables.spedot = (int16_t)(_tecs->getSPEdot() * 50);
+    _larus_variables.skedot = (int16_t)(_tecs->getSKEdot() * 50);
     _larus_variables.gps_status = AP::gps().status();
     
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B

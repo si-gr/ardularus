@@ -67,9 +67,10 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     _c_l = _ahrs.get_accel().z / powf(aspd, 2);    
     _alpha = _c_l + _alpha_0[MIN(((uint8_t)_aspd_filt) - _alpha_0_min_aspd, 0)];
 */
-    float dt = (float)(AP_HAL::micros64() - _prev_update_time)/1e6;
+    uint64_t now = AP_HAL::micros64();
+    float dt = (now - _prev_update_time) * 1.0e-6f;
 
-
+    _prev_update_time = now;
     // Logic borrowed from AP_TECS.cpp
     // Update and average speed rate of change
     // Get DCM
@@ -88,14 +89,13 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
         float current_raw_tot_e = get_wind_compensation(_aspd_vec, wind) + velned.z + (double)_alt;
         _raw_climb_rate = (current_raw_tot_e - _prev_raw_total_energy) / dt;
         _prev_raw_total_energy = current_raw_tot_e;
+        
     }
-
+    float windCorrection = _ahrs.earth_to_body(_prev_wind - wind).x * dt;
+    _prev_wind = wind;
     //float te_altitude = get_te_altitude(aspd);
     //_simple_climb_rate = (te_altitude - _prev_simple_tot_e) / dt;
     //_prev_simple_tot_e = te_altitude;
-    
-    
-    _prev_update_time = AP_HAL::micros64();
 
     
     //ap gps get singleton
@@ -146,7 +146,15 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     _larus_variables.spedot = (int16_t)(_tecs->getSPEdot() * 50);
     _larus_variables.skedot = (int16_t)(_tecs->getSKEdot() * 50);
     _larus_variables.gps_status = AP::gps().status();
-    
+
+    // 128 / 5 = 25.6
+    _larus_variables.newvario0 = (int8_t)(25 * MAX(MIN(-1 * ((_larus_variables.spedot / 9.81) + (_larus_variables.skedot / 9.81 + windCorrection)), 5.0), -5.0));
+    _larus_variables.newvario1 = _larus_variables.newvario0;
+    _larus_variables.newvario2 = _larus_variables.newvario0;
+    _larus_variables.newvario3 = _larus_variables.newvario0;
+    _larus_variables.newvario4 = _larus_variables.newvario0;
+    _larus_variables.newvario5 = _larus_variables.newvario0;
+
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
     //_larus_variables.height_baro = _height_baro;   // 4B
     //_larus_variables.dsp = dsp;   // 4B

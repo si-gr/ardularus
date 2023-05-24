@@ -21,7 +21,7 @@ class LarusVario {
 
 
     const AP_HAL::HAL& hal = AP_HAL::get_HAL();
-    const uint8_t _ble_msg_length = 18;
+    const uint8_t _ble_msg_length = 19;
     AP_Airspeed *aspeed = AP::airspeed();
     const AP_BattMonitor &battery = AP::battery();
     uint8_t _ble_msg_count = 0;
@@ -44,18 +44,21 @@ class LarusVario {
         float airspeed_vector_y;
         float airspeed_vector_z;
         int16_t roll;
+        int8_t newvario0;
         
         float wind_vector_x;
         float wind_vector_y;
         float wind_vector_z;
         int32_t height_gps;
         int16_t pitch;
+        int8_t newvario1;
 
         float ground_course;
         int32_t latitude;
         int32_t longitude;
         float ground_speed;
         int16_t yaw;
+        int8_t newvario2;
 
         float turn_radius;
         int16_t ekf_ground_speed_x;
@@ -63,6 +66,7 @@ class LarusVario {
         float raw_climb_rate;
         int16_t reading;
         float thermability;
+        int8_t newvario3;
 
         int16_t gps_velocity_x;
         int16_t gps_velocity_y;
@@ -72,6 +76,7 @@ class LarusVario {
         int16_t velned_velocity_z;
         int16_t tasstate;
         float height_baro;
+        int8_t newvario4;
 
         int16_t acc_x;
         int16_t acc_y;
@@ -81,6 +86,7 @@ class LarusVario {
         int16_t spedot;
         int16_t skedot;
         uint16_t gps_status;
+        int8_t newvario5;
         
     } _larus_variables;
 

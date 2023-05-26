@@ -1370,3 +1370,7 @@ float AP_TECS::getSKEdot() {
 float AP_TECS::getTASState() {
     return _TAS_state;
 }
+
+float AP_TECS::getVelDot() {
+    return (_vel_dot - _vel_dot_lpf);
+}

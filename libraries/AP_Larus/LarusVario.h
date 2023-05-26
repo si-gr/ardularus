@@ -30,6 +30,8 @@ class LarusVario {
     // store time of last update
     uint64_t _prev_update_time;
 
+    uint16_t fast_var_packet_counter = 0;
+
     // store time of last log
     uint64_t _prev_log_time;
 
@@ -82,13 +84,32 @@ class LarusVario {
         int16_t acc_y;
         int16_t acc_z;
         int16_t battery_voltage;
-        uint32_t gps_time;
+        float windCorrection;
         int16_t spedot;
         int16_t skedot;
         uint16_t gps_status;
         int8_t newvario5;
         
     } _larus_variables;
+
+    struct PACKED fast_vario_larus_variables {
+        int16_t wind_vector_x;
+        int16_t wind_vector_y;
+        int16_t windCorrection;
+        int16_t airspeed;
+        int16_t spedot;
+        int16_t skedot;
+        int16_t roll;
+        int16_t pitch;
+        int8_t vvv; // indicator for app
+    } _fast_larus_variables;
+
+    struct PACKED slow_vario_larus_variables {
+        int16_t battery_voltage;
+        int32_t height_gps;
+        float turn_radius;
+        int8_t vvv; // indicator for app
+    } _slow_larus_variables;
 
     bool _uart_started = false;
 
@@ -135,6 +156,7 @@ class LarusVario {
 
     // Longitudinal acceleration bias filter.
     LowPassFilter<float> _vdotbias_filter{1/60.0};
+    LowPassFilter<Vector3f> _wind_filter{1/2.0};
 
 public:
     /*struct PolarParams {

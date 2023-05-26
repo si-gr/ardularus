@@ -56,6 +56,9 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
         aspd = aspeed->get_airspeed();
         aspeed->get_temperature(pres_temp);
     }
+    float tas;
+    _ahrs.airspeed_estimate(tas);
+    tas = tas * _ahrs.get_EAS2TAS();
 
     // Save alpha 0 if we are in a level flight, not accelerating
     /*if (aspd > _alpha_0_min_aspd){
@@ -91,8 +94,8 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
         _prev_raw_total_energy = current_raw_tot_e;
         
     }
-    float windCorrection = _ahrs.earth_to_body(_prev_wind - wind).x * dt;
-    _prev_wind = wind;
+    float windCorrection = _ahrs.earth_to_body(_wind_filter.get() - wind).x * dt;
+    _wind_filter.apply(wind);
     //float te_altitude = get_te_altitude(aspd);
     //_simple_climb_rate = (te_altitude - _prev_simple_tot_e) / dt;
     //_prev_simple_tot_e = te_altitude;
@@ -135,25 +138,59 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     _larus_variables.velned_velocity_x = (int16_t)(velned.x * 500);   // 2B
     _larus_variables.velned_velocity_y = (int16_t)(velned.y * 500);   // 2B
     _larus_variables.velned_velocity_z = (int16_t)(velned.z * 500);   // 2B
-    _larus_variables.tasstate = (int16_t)(_tecs->getTASState() * 100.0);   // 2B
+    _larus_variables.tasstate = (int16_t)(tas * 100.0);   // 2B
     _larus_variables.height_baro = get_altitude();
 
     _larus_variables.acc_x = (int16_t)(_ahrs.get_accel().x * 50);   // 2B
     _larus_variables.acc_y = (int16_t)(_ahrs.get_accel().y * 50);   // 2B
     _larus_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 50);   // 2B
     _larus_variables.battery_voltage = roundf(AP::battery().voltage() * 100.0f);   // 2B
-    _larus_variables.gps_time = AP::gps().time_week_ms();
+    _larus_variables.windCorrection = windCorrection;   // 4B
     _larus_variables.spedot = (int16_t)(_tecs->getSPEdot() * 50);
     _larus_variables.skedot = (int16_t)(_tecs->getSKEdot() * 50);
     _larus_variables.gps_status = AP::gps().status();
 
     // 128 / 5 = 25.6
-    _larus_variables.newvario0 = (int8_t)(25 * MAX(MIN(-1 * ((_larus_variables.spedot / 9.81) + (_larus_variables.skedot / 9.81 + windCorrection)), 5.0), -5.0));
+    _larus_variables.newvario0 = (int8_t)(25 * MAX(MIN(velned.z + ((_tecs->getTASState() - windCorrection) * _tecs->getVelDot() / 9.81), 5.0), -5.0));
     _larus_variables.newvario1 = _larus_variables.newvario0;
     _larus_variables.newvario2 = _larus_variables.newvario0;
     _larus_variables.newvario3 = _larus_variables.newvario0;
     _larus_variables.newvario4 = _larus_variables.newvario0;
     _larus_variables.newvario5 = _larus_variables.newvario0;
+
+    /*struct PACKED fast_vario_larus_variables {
+        int16_t wind_vector_x;
+        int16_t wind_vector_y;
+        int16_t windCorrection;
+        int16_t airspeed;
+        int16_t spedot;
+        int16_t skedot;
+        int16_t roll;
+        int16_t pitch;
+    } _fast_larus_variables;*/
+
+    _fast_larus_variables.wind_vector_x = (int16_t)(wind.x * 500.0);
+    _fast_larus_variables.wind_vector_y = (int16_t)(wind.y * 500.0);
+    _fast_larus_variables.windCorrection = (int16_t)(windCorrection * 500.0);
+    _fast_larus_variables.airspeed = (int16_t)(aspd * 500.0);
+    _fast_larus_variables.spedot = (int16_t)(_tecs->getSPEdot() * 50);
+    _fast_larus_variables.skedot = (int16_t)(_tecs->getSKEdot() * 50);
+    _fast_larus_variables.roll = (int16_t)((_ahrs.roll / M_PI) * (float)(0x8000));
+    _fast_larus_variables.pitch = (int16_t)((_ahrs.pitch / M_PI) * (float)(0x8000));
+    _fast_larus_variables.vvv = 10;
+
+
+    /*struct PACKED slow_vario_larus_variables {
+        int16_t battery_voltage;
+        int32_t height_gps;
+        float turn_radius;
+        int8_t vvv; // indicator for app
+    } _slow_larus_variables;
+    */
+    _slow_larus_variables.battery_voltage = roundf(AP::battery().voltage() * 100.0f);   // 2B
+    _slow_larus_variables.height_gps = _loc.alt;   // 4B
+    _slow_larus_variables.turn_radius = thermallingRadius;
+    _slow_larus_variables.vvv = 20;
 
     //_larus_variables.smoothed_climb_rate = (int16_t)(smoothed_climb_rate * 100.0);   // 2B
     //_larus_variables.height_baro = _height_baro;   // 4B
@@ -198,9 +235,19 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
         memcpy(_uart_buffer + 14,   &_larus_variables.height_baro,      sizeof(_larus_variables.height_baro));
     }
     */
-    
-    uart->write((uint8_t*)&_larus_variables + (_ble_msg_count * _ble_msg_length), _ble_msg_length);//sizeof(_larus_variables));
-    uart->write((uint8_t)_ble_msg_count);
+    if (true) {
+        uart->write((uint8_t*)&_larus_variables + (_ble_msg_count * _ble_msg_length), _ble_msg_length);
+        uart->write((uint8_t)_ble_msg_count);
+    } else {
+        // send slow data every 100th packet (about 5 sec)
+        if (fast_var_packet_counter < 100){
+            fast_var_packet_counter++;
+            uart->write((uint8_t*)&_fast_larus_variables, sizeof(_fast_larus_variables));
+        } else {
+            fast_var_packet_counter = 0;
+            uart->write((uint8_t*)&_slow_larus_variables, sizeof(_slow_larus_variables));
+        }
+    }
     uart->flush();
     _ble_msg_count++;
     _ble_msg_count %= _num_messages;    // last message is special debug

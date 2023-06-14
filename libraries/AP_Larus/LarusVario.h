@@ -42,9 +42,9 @@ class LarusVario {
 
     struct PACKED larus_variables {
         float airspeed;
-        float airspeed_vector_x;
-        float airspeed_vector_y;
-        float airspeed_vector_z;
+        float e0;
+        float e1;
+        float e2;
         int16_t roll;
         int8_t newvario0;
         
@@ -58,7 +58,7 @@ class LarusVario {
         float ground_course;
         int32_t latitude;
         int32_t longitude;
-        float ground_speed;
+        float e3;
         int16_t yaw;
         int8_t newvario2;
 
@@ -187,7 +187,7 @@ public:
     float alt;
     float reading;
 
-    void update(float thermalability, float varioReading, float thermallingRadius);
+    void update(float thermalability, float varioReading, float thermallingRadius, float e0, float e1, float e2, float e3);
     float calculate_aircraft_sinkrate(float phi) const;
 
     void start_uart(void);

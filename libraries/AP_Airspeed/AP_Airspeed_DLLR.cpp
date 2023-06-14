@@ -212,7 +212,7 @@ void AP_Airspeed_DLLR::timer()
     float temp = ((float)(temperature_data + Tref_Counts) * 125.f)/f2p24 - 40.f;
     WITH_SEMAPHORE(sem);
     const uint32_t now = AP_HAL::millis();
-    if ((temperature != 0) && (fabsf(temperature - temp) > 10) && ((now - last_sample_time_ms) < 2000)) {
+    if ((fabsf(temperature - temp) > 10) && ((now - last_sample_time_ms) < 2000)) {
         Debug("DLLR: Temperature swing %f", temp);
         return;
     }

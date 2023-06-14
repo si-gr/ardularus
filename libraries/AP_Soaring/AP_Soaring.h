@@ -121,13 +121,30 @@ public:
 
     float get_vario_reading() const
     {
-        return _vario.get_displayed_value();
+        return _vario.reading;
     }
 
     float get_thermability()
     {
         return _thermalability;
     }
+
+    float get_e0() {
+        return _ekf.X[0];
+    }
+
+    float get_e1() {
+        return _ekf.X[1];
+    }
+
+    float get_e2() {
+        return _ekf.X[2];
+    }
+
+    float get_e3() {
+        return _ekf.X[3];
+    }
+
 
     void update_vario();
 

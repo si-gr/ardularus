@@ -44,7 +44,7 @@ float LarusVario::get_wind_compensation(Vector3f velned, Vector3f wind){
     return powf(velned.x - wind.x, 2) + powf(velned.y - wind.y, 2);
 }
 
-void LarusVario::update(float thermalability, float varioReading, float thermallingRadius)
+void LarusVario::update(float thermalability, float varioReading, float thermallingRadius, float e0, float e1, float e2, float e3)
 {   
     if(!_uart_started){
         start_uart();
@@ -108,9 +108,9 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     //uart->printf("test print larus %.4f %.4f %.4f\r\n", (double)roll, (double)_height_baro, (double)aspd);
     _larus_variables.airspeed = aspd;   // 4B
     //_larus_variables.airspeed_filtered = _aspd_filt;
-    _larus_variables.airspeed_vector_x = _aspd_vec.x;   // 4B
-    _larus_variables.airspeed_vector_y = _aspd_vec.y;   // 4B
-    _larus_variables.airspeed_vector_z = _aspd_vec.z;   // 4B    
+    _larus_variables.e0 = e0;   // 4B
+    _larus_variables.e1 = e1;   // 4B
+    _larus_variables.e2 = e2;   // 4B    
     _larus_variables.roll = (int16_t)((_ahrs.roll / M_PI) * (float)(0x8000)); // 2B
     
     _larus_variables.wind_vector_x = wind.x;   // 4B
@@ -121,7 +121,7 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
 
     _larus_variables.latitude = _loc.lat;   // 4B
     _larus_variables.longitude = _loc.lng;   // 4B
-    _larus_variables.ground_speed = AP::gps().ground_speed();   // 4B
+    _larus_variables.e3 = e3;   // 4B
     _larus_variables.ground_course = AP::gps().ground_course();   // 4B
     _larus_variables.yaw = (int16_t)((_ahrs.yaw / M_PI) * (float)(0x8000));    // 2B 
 
@@ -235,9 +235,16 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
         memcpy(_uart_buffer + 14,   &_larus_variables.height_baro,      sizeof(_larus_variables.height_baro));
     }
     */
+   
+        AP::logger().WriteStreaming("LARU", "TimeUS,aspd,spedot,skedot", "Qfff",
+                       AP_HAL::micros64(),
+                       (double)_fast_larus_variables.airspeed,
+                       (double)_fast_larus_variables.spedot,
+                       (double)_fast_larus_variables.skedot);
     if (true) {
         uart->write((uint8_t*)&_larus_variables + (_ble_msg_count * _ble_msg_length), _ble_msg_length);
         uart->write((uint8_t)_ble_msg_count);
+        
     } else {
         // send slow data every 100th packet (about 5 sec)
         if (fast_var_packet_counter < 100){
@@ -251,6 +258,8 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     uart->flush();
     _ble_msg_count++;
     _ble_msg_count %= _num_messages;    // last message is special debug
+
+
     
     // Log at 1/10Hz
     //if((float)(AP_HAL::micros64() - _prev_log_time)/1e9 > 10 && _ble_msg_count == 1){

@@ -190,6 +190,7 @@ void AP_Airspeed_DLLR::timer()
                              raw_bytes[6];
 
     float pcorr = pnorm + (DLLR_ABCD[0] * powf(pnorm, 3.0f) + DLLR_ABCD[1] * powf(pnorm, 2.0f) + DLLR_ABCD[2] * pnorm + DLLR_ABCD[3]);
+    
     //int32_t iPcorr = (int32_t)(pcorr * (float)MAX_24B_VAL) + 0x800000;  // Convert +/- 1.0f to 24-bit signed integer -0.7990 * (2^23 - 1) + 8 388 608 = 15 091 104.993
 
     // Compute difference from reference temperature, in sensor counts:
@@ -208,6 +209,9 @@ void AP_Airspeed_DLLR::timer()
     }
     float tcorr = (1.0f - (DLLR_E * 2.5f * pcorr)) * temperature_data * temp_correction / TCKScale; // value between 0 and 1
     pcorr = pcorr - tcorr;
+
+    pcorr = (pnorm + 1.0) / 2.0;  // use pnorm without any compensation
+    
     pcomp = abs((int32_t) ((pcorr - 1.0f) * 2 * (float)MAX_24B_VAL) + 0x800000);   // 0.3995 * (2^24 - 1) = 6 702 497.3925
     float temp = ((float)(temperature_data + Tref_Counts) * 125.f)/f2p24 - 40.f;
     WITH_SEMAPHORE(sem);
@@ -246,9 +250,20 @@ bool AP_Airspeed_DLLR::get_differential_pressure(float &_pressure)
         pressure = pressure_sum / press_count;
         press_count = 0;
         pressure_sum = 0;
+    
+        // Zero pressure calibration with the first 10 samples
+        if (calibration_vals < 10) {
+            // first 4 samples are used for initialization, next 6 samples are used to average the zero pressure
+            if (calibration_vals > 4) {
+                zero_pressure = zero_pressure * 0.9 + pressure * 0.1;
+            } else {
+                zero_pressure = pressure;
+            }
+            calibration_vals++;
+        }
     }
-
-    _pressure = pressure;
+    //zero_pressure = pressure;
+    _pressure = pressure - zero_pressure;
     return true;
 }
 

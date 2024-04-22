@@ -79,6 +79,8 @@ private:
     int8_t i8TC50L = 0;
 
     uint8_t eeprom_finished = 0;
+    uint8_t calibration_vals = 0;
+    float zero_pressure = 0;
     bool eeprom_requested = false;
 
     const uint32_t Tref_Counts = 8724019;

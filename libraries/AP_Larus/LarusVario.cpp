@@ -94,6 +94,7 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
         _prev_raw_total_energy = current_raw_tot_e;
         
     }
+    
     float windCorrection = _ahrs.earth_to_body(_wind_filter.get() - wind).x * dt;
     _wind_filter.apply(wind);
     //float te_altitude = get_te_altitude(aspd);
@@ -171,12 +172,14 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
 
     _fast_larus_variables.wind_vector_x = (int16_t)(wind.x * 500.0);
     _fast_larus_variables.wind_vector_y = (int16_t)(wind.y * 500.0);
-    _fast_larus_variables.windCorrection = (int16_t)(windCorrection * 500.0);
+    //_fast_larus_variables.windCorrection = (int16_t)(windCorrection * 500.0);
+    
     _fast_larus_variables.airspeed = (int16_t)(aspd * 500.0);
     _fast_larus_variables.spedot = (int16_t)(_tecs->getSPEdot() * 50);
     _fast_larus_variables.skedot = (int16_t)(_tecs->getSKEdot() * 50);
     _fast_larus_variables.roll = (int16_t)((_ahrs.roll / M_PI) * (float)(0x8000));
     _fast_larus_variables.pitch = (int16_t)((_ahrs.pitch / M_PI) * (float)(0x8000));
+    _fast_larus_variables.yaw = (int16_t)((_ahrs.yaw / M_PI) * (float)(0x8000));
     _fast_larus_variables.vvv = 10;
 
 
@@ -241,7 +244,7 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
                        (double)_fast_larus_variables.airspeed,
                        (double)_fast_larus_variables.spedot,
                        (double)_fast_larus_variables.skedot);
-    if (true) {
+    if (false) {
         uart->write((uint8_t*)&_larus_variables + (_ble_msg_count * _ble_msg_length), _ble_msg_length);
         uart->write((uint8_t)_ble_msg_count);
         

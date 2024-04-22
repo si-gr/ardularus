@@ -95,12 +95,12 @@ class LarusVario {
     struct PACKED fast_vario_larus_variables {
         int16_t wind_vector_x;
         int16_t wind_vector_y;
-        int16_t windCorrection;
         int16_t airspeed;
         int16_t spedot;
         int16_t skedot;
         int16_t roll;
         int16_t pitch;
+        int16_t yaw;
         int8_t vvv; // indicator for app
     } _fast_larus_variables;
 

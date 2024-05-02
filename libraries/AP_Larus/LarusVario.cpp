@@ -70,10 +70,10 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     _c_l = _ahrs.get_accel().z / powf(aspd, 2);    
     _alpha = _c_l + _alpha_0[MIN(((uint8_t)_aspd_filt) - _alpha_0_min_aspd, 0)];
 */
-    uint64_t now = AP_HAL::micros64();
-    float dt = (now - _prev_update_time) * 1.0e-6f;
+    //uint64_t now = AP_HAL::micros64();
+    //float dt = (now - _prev_update_time) * 1.0e-6f;
 
-    _prev_update_time = now;
+    //_prev_update_time = now;
     // Logic borrowed from AP_TECS.cpp
     // Update and average speed rate of change
     // Get DCM
@@ -83,18 +83,18 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
 
     Vector3f velned;
     Vector3f wind;
-    Vector2f groundspeed_vector = _ahrs.groundspeed_vector();
+    //Vector2f groundspeed_vector = _ahrs.groundspeed_vector();
 
     if (_ahrs.get_velocity_NED(velned)) {
 
         wind = _ahrs.wind_estimate();
-        _ahrs.airspeed_vector_true(_aspd_vec);
-        float current_raw_tot_e = get_wind_compensation(_aspd_vec, wind) + velned.z + (double)_alt;
-        _raw_climb_rate = (current_raw_tot_e - _prev_raw_total_energy) / dt;
-        _prev_raw_total_energy = current_raw_tot_e;
+        //_ahrs.airspeed_vector_true(_aspd_vec);
+        //float current_raw_tot_e = get_wind_compensation(_aspd_vec, wind) + velned.z + (double)_alt;
+        //_raw_climb_rate = (current_raw_tot_e - _prev_raw_total_energy) / dt;
+        //_prev_raw_total_energy = current_raw_tot_e;
         
     }
-    
+  /*
     float windCorrection = _ahrs.earth_to_body(_wind_filter.get() - wind).x * dt;
     _wind_filter.apply(wind);
     //float te_altitude = get_te_altitude(aspd);
@@ -105,7 +105,8 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     //ap gps get singleton
     if(_ahrs.get_location(_loc) && AP::gps().status() >= AP_GPS::GPS_OK_FIX_3D) {
             _loc = AP::gps().location();
-    }
+    }*/  
+    /*
     //uart->printf("test print larus %.4f %.4f %.4f\r\n", (double)roll, (double)_height_baro, (double)aspd);
     _larus_variables.airspeed = aspd;   // 4B
     //_larus_variables.airspeed_filtered = _aspd_filt;
@@ -158,6 +159,7 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     _larus_variables.newvario3 = _larus_variables.newvario0;
     _larus_variables.newvario4 = _larus_variables.newvario0;
     _larus_variables.newvario5 = _larus_variables.newvario0;
+    */
 
     /*struct PACKED fast_vario_larus_variables {
         int16_t wind_vector_x;
@@ -172,8 +174,6 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
 
     _fast_larus_variables.wind_vector_x = (int16_t)(wind.x * 500.0);
     _fast_larus_variables.wind_vector_y = (int16_t)(wind.y * 500.0);
-    //_fast_larus_variables.windCorrection = (int16_t)(windCorrection * 500.0);
-    
     _fast_larus_variables.airspeed = (int16_t)(aspd * 500.0);
     _fast_larus_variables.spedot = (int16_t)(_tecs->getSPEdot() * 50);
     _fast_larus_variables.skedot = (int16_t)(_tecs->getSKEdot() * 50);
@@ -181,6 +181,29 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
     _fast_larus_variables.pitch = (int16_t)((_ahrs.pitch / M_PI) * (float)(0x8000));
     _fast_larus_variables.yaw = (int16_t)((_ahrs.yaw / M_PI) * (float)(0x8000));
     _fast_larus_variables.vvv = 10;
+
+    /*struct PACKED fast_aux_larus_variables {
+        int16_t velned_velocity_x;//500
+        int16_t velned_velocity_y;//500
+        int16_t velned_velocity_z;//500
+        int16_t acc_x;//50
+        int16_t acc_y;//50
+        int16_t acc_z;//50
+        int16_t tas;//500
+        int16_t varioreading;//500
+        int8_t vvv;
+    } _fast_aux_variables;
+    */
+
+    _fast_aux_variables.velned_velocity_x = (int16_t)(velned.x * 500);
+    _fast_aux_variables.velned_velocity_y = (int16_t)(velned.y * 500);
+    _fast_aux_variables.velned_velocity_z = (int16_t)(velned.z * 500);
+    _fast_aux_variables.acc_x = (int16_t)(_ahrs.get_accel().x * 50);
+    _fast_aux_variables.acc_y = (int16_t)(_ahrs.get_accel().y * 50);
+    _fast_aux_variables.acc_z = (int16_t)(_ahrs.get_accel().z * 50);
+    _fast_aux_variables.tas = (int16_t)(tas * 500);
+    _fast_aux_variables.varioreading = (int16_t)(varioReading * 500);
+    _fast_aux_variables.vvv = 11;
 
 
     /*struct PACKED slow_vario_larus_variables {
@@ -252,7 +275,11 @@ void LarusVario::update(float thermalability, float varioReading, float thermall
         // send slow data every 100th packet (about 5 sec)
         if (fast_var_packet_counter < 100){
             fast_var_packet_counter++;
-            uart->write((uint8_t*)&_fast_larus_variables, sizeof(_fast_larus_variables));
+            if (fast_var_packet_counter % 2 == 0){
+                uart->write((uint8_t*)&_fast_larus_variables, sizeof(_fast_larus_variables));
+            } else {
+                uart->write((uint8_t*)&_fast_aux_variables, sizeof(_fast_aux_variables));
+            }
         } else {
             fast_var_packet_counter = 0;
             uart->write((uint8_t*)&_slow_larus_variables, sizeof(_slow_larus_variables));

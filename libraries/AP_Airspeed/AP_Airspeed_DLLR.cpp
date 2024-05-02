@@ -252,7 +252,7 @@ bool AP_Airspeed_DLLR::get_differential_pressure(float &_pressure)
         pressure_sum = 0;
     
         // Zero pressure calibration with the first 10 samples
-        if (calibration_vals < 10) {
+        if (calibration_vals < 30) {
             // first 4 samples are used for initialization, next 6 samples are used to average the zero pressure
             if (calibration_vals > 4) {
                 zero_pressure = zero_pressure * 0.9 + pressure * 0.1;
@@ -263,7 +263,7 @@ bool AP_Airspeed_DLLR::get_differential_pressure(float &_pressure)
         }
     }
     //zero_pressure = pressure;
-    _pressure = pressure - zero_pressure;
+    _pressure = (pressure * 0.81f) - zero_pressure;
     return true;
 }
 

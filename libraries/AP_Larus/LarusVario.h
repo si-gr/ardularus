@@ -104,6 +104,18 @@ class LarusVario {
         int8_t vvv; // indicator for app
     } _fast_larus_variables;
 
+    struct PACKED fast_aux_larus_variables {
+        int16_t velned_velocity_x;//500
+        int16_t velned_velocity_y;//500
+        int16_t velned_velocity_z;//500
+        int16_t acc_x;//50
+        int16_t acc_y;//50
+        int16_t acc_z;//50
+        int16_t tas;//500
+        int16_t varioreading;//500
+        int8_t vvv;
+    } _fast_aux_variables;
+
     struct PACKED slow_vario_larus_variables {
         int16_t battery_voltage;
         int32_t height_gps;
